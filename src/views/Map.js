@@ -1,5 +1,5 @@
 import React from 'react'
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
+import { GoogleMap, useJsApiLoader, Marker, MarkerClusterer } from '@react-google-maps/api'
 import useStation from '../hooks/useStations'
 
 const containerStyle = {
@@ -8,15 +8,22 @@ const containerStyle = {
   height: '33.33em',
 }
 
+const clustererOptions = {
+  imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', // so you must have m1.png, m2.png, m3.png, m4.png, m5.png and m6.png in that folder
+}
+
 // NOTE Taipei
 const defaultCenter = {
   lat: 25.047924,
   lng: 121.517081,
 }
 
-function MyComponent() {
-  // temp1.retVal.filter(a => a.area_code ==='00')
-  const { stations, isError, isLoading } = useStation()
+function createKey(station) {
+  return station.lat + station.lng + station.station_id
+}
+
+function Map() {
+  const { data: stations, isError, isLoading } = useStation()
   console.log(stations)
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -39,7 +46,7 @@ function MyComponent() {
   }, [])
 
   const onLoadMarker = marker => {
-    console.log('marker: ', marker)
+    // console.log('marker: ', marker)
   }
 
   if (loadError) {
@@ -48,25 +55,41 @@ function MyComponent() {
 
   return isLoaded ? (
     <>
+      <h1>Google Maps</h1>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={defaultCenter}
-        zoom={12}
+        zoom={14}
         onLoad={onLoad}
         onUnmount={onUnmount}
       >
         {/* Child components, such as markers, info windows, etc. */}
-        {stations?.length > 1 &&
-          stations
-            .filter(a => a.area_code === '00')
-            .map(station => {
-              const position = {
-                lat: Number(station.lat),
-                lng: Number(station.lng),
-              }
-              return <Marker key={station.id} onLoad={onLoadMarker} position={position} />
-            })}
-        <></>
+
+        {stations?.length > 1 && (
+          <MarkerClusterer options={clustererOptions}>
+            {clusterer =>
+              stations
+                // .filter(a => a.area_code === '00')
+                .map(station => {
+                  const position = {
+                    lat: Number(station.lat),
+                    lng: Number(station.lng),
+                  }
+                  return (
+                    <Marker
+                      key={createKey(station)}
+                      onLoad={onLoadMarker}
+                      icon={'https://img.icons8.com/doodle/30/000000/marker--v1.png'}
+                      position={position}
+                      clusterer={clusterer}
+                      animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
+                      onClick={() => console.log(station)}
+                    />
+                  )
+                })
+            }
+          </MarkerClusterer>
+        )}
       </GoogleMap>
     </>
   ) : (
@@ -74,4 +97,4 @@ function MyComponent() {
   )
 }
 
-export default React.memo(MyComponent)
+export default React.memo(Map)
