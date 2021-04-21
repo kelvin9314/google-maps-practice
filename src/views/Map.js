@@ -1,9 +1,6 @@
 import React from 'react'
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
-import fetch from 'unfetch'
-import useSWR from 'swr'
-
-const fetcher = url => fetch(url).then(r => r.json())
+import useStation from '../hooks/useStations'
 
 const containerStyle = {
   width: '100%',
@@ -11,22 +8,16 @@ const containerStyle = {
   height: '33.33em',
 }
 
-// TAG Taipei
+// NOTE Taipei
 const defaultCenter = {
   lat: 25.047924,
   lng: 121.517081,
 }
 
-const position = {
-  lat: 25.047924,
-  lng: 121.517081,
-}
-
 function MyComponent() {
-  // ?type=2
-  //
-  const { data: bikeStations } = useSWR(' https://apis.youbike.com.tw/api/front/station/all', fetcher)
-  console.log(bikeStations)
+  // temp1.retVal.filter(a => a.area_code ==='00')
+  const { stations, isError, isLoading } = useStation()
+  console.log(stations)
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -57,26 +48,24 @@ function MyComponent() {
 
   return isLoaded ? (
     <>
-      {/* <select>
-        <option>English</option>
-        <option>中文</option>
-      </select> */}
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={defaultCenter}
-        zoom={13}
+        zoom={12}
         onLoad={onLoad}
         onUnmount={onUnmount}
       >
         {/* Child components, such as markers, info windows, etc. */}
-        {/* {bikeStations?.retVal?.length > 1 &&
-          bikeStations?.retVal.forEach(bikeStations => {
-            // console.log(bikeStations)
-            const { lat, lng } = bikeStations
-            console.log(lat, lng)
-            return <Marker onLoad={onLoadMarker} position={{ lat, lng }} />
-          })} */}
-        <Marker onLoad={onLoadMarker} position={position} />
+        {stations?.length > 1 &&
+          stations
+            .filter(a => a.area_code === '00')
+            .map(station => {
+              const position = {
+                lat: Number(station.lat),
+                lng: Number(station.lng),
+              }
+              return <Marker key={station.id} onLoad={onLoadMarker} position={position} />
+            })}
         <></>
       </GoogleMap>
     </>
