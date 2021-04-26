@@ -2,9 +2,11 @@ import React from 'react'
 import { GoogleMap, useJsApiLoader, Marker, MarkerClusterer } from '@react-google-maps/api'
 import useStation from '../hooks/useStations'
 
+import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
+
 const containerStyle = {
   width: '100%',
-  minWidth: '970px',
+  minWidth: '320px',
   height: '33.33em',
 }
 
@@ -15,6 +17,10 @@ const clustererOptions = {
   // gridSize: 50, // default value is 60.
   // maxZoom: 20,
   imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', // so you must have m1.png, m2.png, m3.png, m4.png, m5.png and m6.png in that folder
+}
+
+const mapOptions = {
+  streetViewControl: false,
 }
 
 // NOTE Taipei
@@ -30,6 +36,7 @@ function createKey(station) {
 function Map() {
   const { data: stations, isError, isLoading } = useStation()
   // console.log(stations)
+  const [selectedStation, setSelectedStation] = React.useState({})
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -56,6 +63,7 @@ function Map() {
 
   const toggleInfoWindow = station => {
     console.log(station)
+    setSelectedStation({ ...station })
   }
 
   if (loadError) {
@@ -69,11 +77,12 @@ function Map() {
         mapContainerStyle={containerStyle}
         center={defaultCenter}
         zoom={defaultZoom}
+        options={mapOptions}
         onLoad={onLoad}
         onUnmount={onUnmount}
       >
         {/* Child components, such as markers, info windows, etc. */}
-
+        <MapInfoWIndow stationObj={selectedStation} />
         {stations?.length > 1 && (
           <MarkerClusterer options={clustererOptions}>
             {clusterer =>
