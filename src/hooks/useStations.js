@@ -10,7 +10,7 @@ const useStation = () => {
     type: '1',
   }
   const { data, error } = useSWR(`/api/front/station/all?${httpBuildQuery(queryParams)}`, fetcher, options)
-  console.log(data)
+  // console.log(data)
 
   return {
     data: data?.retVal,

@@ -8,7 +8,12 @@ const containerStyle = {
   height: '33.33em',
 }
 
+const defaultZoom = 15
+
 const clustererOptions = {
+  // averageCenter: true,
+  // gridSize: 50, // default value is 60.
+  // maxZoom: 20,
   imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', // so you must have m1.png, m2.png, m3.png, m4.png, m5.png and m6.png in that folder
 }
 
@@ -24,7 +29,7 @@ function createKey(station) {
 
 function Map() {
   const { data: stations, isError, isLoading } = useStation()
-  console.log(stations)
+  // console.log(stations)
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -49,6 +54,10 @@ function Map() {
     // console.log('marker: ', marker)
   }
 
+  const toggleInfoWindow = station => {
+    console.log(station)
+  }
+
   if (loadError) {
     return <div>Map cannot be loaded right now, sorry.</div>
   }
@@ -59,7 +68,7 @@ function Map() {
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={defaultCenter}
-        zoom={14}
+        zoom={defaultZoom}
         onLoad={onLoad}
         onUnmount={onUnmount}
       >
@@ -78,12 +87,18 @@ function Map() {
                   return (
                     <Marker
                       key={createKey(station)}
+                      // cursor={station.name_tw}
+                      title={station.name_tw}
                       onLoad={onLoadMarker}
                       icon={'https://img.icons8.com/doodle/30/000000/marker--v1.png'}
                       position={position}
                       clusterer={clusterer}
-                      animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
-                      onClick={() => console.log(station)}
+                      // animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
+                      onClick={() => toggleInfoWindow(station)}
+                      // onMouseOver={() => toggleInfoWindow(station)}
+                      // onMouseUp={() => console.log('onMouseUp')}
+                      // onMouseOut={() => console.log('onMouseOut')}
+                      onRightClick={() => console.log('onRightClick')}
                     />
                   )
                 })
