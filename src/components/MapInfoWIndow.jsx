@@ -67,7 +67,9 @@ const onLoad = infoWindow => {
   console.log('infoWindow: ', infoWindow)
 }
 
-const options = {}
+const options = {
+  pixelOffset: { width: 0, height: -30 },
+}
 
 const MapInfoWIndow = ({ stationObj = {} }) => {
   const [isShow, setIsShow] = useState(false)
