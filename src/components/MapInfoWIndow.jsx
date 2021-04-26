@@ -4,12 +4,16 @@ import styled from 'styled-components'
 
 const InfoDiv = styled.div`
   width: 245px;
-  margin: 0;
+  margin: 0 0;
   overflow: hidden;
   text-align: left;
   font-size: 0.9em;
   line-height: 24px;
   color: #7f7f7f;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  vertical-align: baseline;
 
   p {
     b {
@@ -59,32 +63,16 @@ const InfoDiv = styled.div`
   }
 `
 
-const divStyle = {
-  background: `white`,
-  border: `1px solid #ccc`,
-  padding: 15,
-}
-
 const onLoad = infoWindow => {
   console.log('infoWindow: ', infoWindow)
 }
 
 const options = {}
 
-// const position = {
-//   lat: 25.047924,
-//   lng: 121.517081,
-// }
-
 const MapInfoWIndow = ({ stationObj = {} }) => {
   const [isShow, setIsShow] = useState(false)
-  // React.useCallback(function callback(stationObj) {
-  //   console.log(stationObj)
-  //   setIsShow(Object.keys(stationObj).length > 0)
-  // }, [])
 
   useEffect(() => {
-    // console.log(stationObj)
     setIsShow(Object.keys(stationObj).length > 0)
   }, [stationObj])
   return (
@@ -96,9 +84,27 @@ const MapInfoWIndow = ({ stationObj = {} }) => {
           options={options}
           onCloseClick={() => setIsShow(false)}
         >
-          <div style={divStyle}>
-            <h1>InfoWindow</h1>
-          </div>
+          <InfoDiv>
+            <p>租賃站點查詢 :{stationObj.name_tw}</p>
+            <p>站點位置 : {stationObj.address_tw}</p>
+            {stationObj.status === 1 && stationObj.empty_spaces !== 0 && stationObj.available_spaces !== 0 ? (
+              <>
+                <p>
+                  <span>可借車輛 : {stationObj.available_spaces} 輛</span>
+                </p>
+                <p>
+                  <span>可停空位 : {stationObj.empty_spaces} 輛</span>
+                </p>
+              </>
+            ) : (
+              <p>
+                <span>場站狀態: 暫停營運</span>
+              </p>
+            )}
+            <p>
+              <span>時間 : {stationObj.updated_at} </span>
+            </p>
+          </InfoDiv>
         </InfoWindow>
       )}
     </>
