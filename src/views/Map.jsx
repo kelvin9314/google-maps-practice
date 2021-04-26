@@ -1,5 +1,12 @@
 import React from 'react'
-import { GoogleMap, useJsApiLoader, Marker, MarkerClusterer } from '@react-google-maps/api'
+import {
+  GoogleMap,
+  useJsApiLoader,
+  Marker,
+  MarkerClusterer,
+  StandaloneSearchBox,
+  Autocomplete,
+} from '@react-google-maps/api'
 import useStation from '../hooks/useStations'
 
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
@@ -33,6 +40,24 @@ function createKey(station) {
   return station.lat + station.lng + station.station_id
 }
 
+const libraries = ['places']
+
+const inputStyle = {
+  boxSizing: `border-box`,
+  border: `1px solid transparent`,
+  width: `240px`,
+  height: `32px`,
+  padding: `0 12px`,
+  borderRadius: `3px`,
+  boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
+  fontSize: `14px`,
+  outline: `none`,
+  textOverflow: `ellipses`,
+  position: 'absolute',
+  top: '10px',
+  right: '10px',
+}
+
 function Map() {
   const { data: stations, isError, isLoading } = useStation()
   // console.log(stations)
@@ -43,9 +68,12 @@ function Map() {
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY,
     language: 'zh-TW', // 'en', 'zh-TW', https://developers.google.com/maps/faq#languagesupport
     // version: '3',
+    region: 'TW',
+    libraries,
   })
 
   const [map, setMap] = React.useState(null)
+  const [autoComplete, setAutoComplete] = React.useState(null)
 
   const onLoad = React.useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds()
@@ -66,6 +94,14 @@ function Map() {
     setSelectedStation({ ...station })
   }
 
+  const onPlaceChanged = () => {
+    if (autoComplete !== null) {
+      console.log(autoComplete.getPlace())
+    } else {
+      console.log('Autocomplete is not loaded yet!')
+    }
+  }
+
   if (loadError) {
     return <div>Map cannot be loaded right now, sorry.</div>
   }
@@ -73,6 +109,7 @@ function Map() {
   return isLoaded ? (
     <>
       <h1>Google Maps</h1>
+
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={defaultCenter}
@@ -82,6 +119,35 @@ function Map() {
         onUnmount={onUnmount}
       >
         {/* Child components, such as markers, info windows, etc. */}
+        <StandaloneSearchBox>
+          <input
+            type="text"
+            placeholder="Customized your placeholder"
+            style={inputStyle}
+            onPlacesChanged={aaa => console.log(aaa)}
+          />
+        </StandaloneSearchBox>
+        <Autocomplete onLoad={autocomplete => setAutoComplete(autocomplete)} onPlaceChanged={() => onPlaceChanged()}>
+          <input
+            type="text"
+            placeholder="Customized your placeholder"
+            style={{
+              boxSizing: `border-box`,
+              border: `1px solid transparent`,
+              width: `240px`,
+              height: `32px`,
+              padding: `0 12px`,
+              borderRadius: `3px`,
+              boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
+              fontSize: `14px`,
+              outline: `none`,
+              textOverflow: `ellipses`,
+              position: 'absolute',
+              left: '50%',
+              marginLeft: '-120px',
+            }}
+          />
+        </Autocomplete>
         <MapInfoWIndow stationObj={selectedStation} />
         {stations?.length > 1 && (
           <MarkerClusterer options={clustererOptions}>
