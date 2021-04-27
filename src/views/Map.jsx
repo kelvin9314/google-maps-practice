@@ -10,14 +10,13 @@ import {
 import useStation from '../hooks/useStations'
 
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
+import { areaCenterPosition, defaultZoom } from '../utils/constant'
 
 const containerStyle = {
   width: '100%',
   minWidth: '320px',
   height: '33.33em',
 }
-
-const defaultZoom = 15
 
 const clustererOptions = {
   // averageCenter: true,
@@ -28,12 +27,6 @@ const clustererOptions = {
 
 const mapOptions = {
   streetViewControl: false,
-}
-
-// NOTE Taipei
-const defaultCenter = {
-  lat: 25.047924,
-  lng: 121.517081,
 }
 
 function createKey(station) {
@@ -102,6 +95,18 @@ function Map() {
     }
   }
 
+  function panToHandler(latlng) {
+    map.setZoom(12)
+    map.panTo(latlng)
+    // const position = new window.google.maps.LatLng(latlng)
+    // map.panTo(position)
+  }
+
+  function selectChangeHandler(e) {
+    const areaKey = e.target.value
+    panToHandler(areaCenterPosition[areaKey])
+  }
+
   if (loadError) {
     return <div>Map cannot be loaded right now, sorry.</div>
   }
@@ -109,10 +114,9 @@ function Map() {
   return isLoaded ? (
     <>
       <h1>Google Maps</h1>
-
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={defaultCenter}
+        center={areaCenterPosition.taipei}
         zoom={defaultZoom}
         options={mapOptions}
         onLoad={onLoad}
@@ -127,27 +131,7 @@ function Map() {
             onPlacesChanged={aaa => console.log(aaa)}
           />
         </StandaloneSearchBox>
-        <Autocomplete onLoad={autocomplete => setAutoComplete(autocomplete)} onPlaceChanged={() => onPlaceChanged()}>
-          <input
-            type="text"
-            placeholder="Customized your placeholder"
-            style={{
-              boxSizing: `border-box`,
-              border: `1px solid transparent`,
-              width: `240px`,
-              height: `32px`,
-              padding: `0 12px`,
-              borderRadius: `3px`,
-              boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
-              fontSize: `14px`,
-              outline: `none`,
-              textOverflow: `ellipses`,
-              position: 'absolute',
-              left: '50%',
-              marginLeft: '-120px',
-            }}
-          />
-        </Autocomplete>
+
         <MapInfoWIndow stationObj={selectedStation} />
         {stations?.length > 1 && (
           <MarkerClusterer options={clustererOptions}>
@@ -181,6 +165,35 @@ function Map() {
           </MarkerClusterer>
         )}
       </GoogleMap>
+
+      <select name="menu-areas" onChange={selectChangeHandler}>
+        {Object.keys(areaCenterPosition).map(key => (
+          <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng}>{key}</option>
+        ))}
+      </select>
+      <button onClick={() => panToHandler(areaCenterPosition.taichung)}> panto Button</button>
+
+      <Autocomplete onLoad={autocomplete => setAutoComplete(autocomplete)} onPlaceChanged={() => onPlaceChanged()}>
+        <input
+          type="text"
+          placeholder="Customized your placeholder"
+          // style={{
+          //   boxSizing: `border-box`,
+          //   border: `1px solid transparent`,
+          //   width: `240px`,
+          //   height: `32px`,
+          //   padding: `0 12px`,
+          //   borderRadius: `3px`,
+          //   boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
+          //   fontSize: `14px`,
+          //   outline: `none`,
+          //   textOverflow: `ellipses`,
+          //   position: 'absolute',
+          //   left: '50%',
+          //   marginLeft: '-120px',
+          // }}
+        />
+      </Autocomplete>
     </>
   ) : (
     <></>
