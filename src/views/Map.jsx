@@ -27,6 +27,7 @@ const clustererOptions = {
 
 const mapOptions = {
   streetViewControl: false,
+  minZoom: 8,
 }
 
 function createKey(station) {
@@ -48,7 +49,7 @@ const inputStyle = {
   textOverflow: `ellipses`,
   position: 'absolute',
   top: '10px',
-  right: '10px',
+  right: '100px',
 }
 
 function Map() {
@@ -67,6 +68,7 @@ function Map() {
 
   const [map, setMap] = React.useState(null)
   const [autoComplete, setAutoComplete] = React.useState(null)
+  const [searchBox, setSearchBox] = React.useState(null)
 
   const onLoad = React.useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds()
@@ -89,14 +91,23 @@ function Map() {
 
   const onPlaceChanged = () => {
     if (autoComplete !== null) {
-      console.log(autoComplete.getPlace())
+      const place = autoComplete.getPlace()
+      console.log(place)
+      if (!place.geometry) return
+
+      const latlng = {
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+      }
+      console.log(latlng)
+      map.setZoom(16)
+      panToHandler(latlng)
     } else {
       console.log('Autocomplete is not loaded yet!')
     }
   }
 
   function panToHandler(latlng) {
-    map.setZoom(12)
     map.panTo(latlng)
     // const position = new window.google.maps.LatLng(latlng)
     // map.panTo(position)
@@ -104,6 +115,7 @@ function Map() {
 
   function selectChangeHandler(e) {
     const areaKey = e.target.value
+    map.setZoom(14)
     panToHandler(areaCenterPosition[areaKey])
   }
 
@@ -123,14 +135,6 @@ function Map() {
         onUnmount={onUnmount}
       >
         {/* Child components, such as markers, info windows, etc. */}
-        <StandaloneSearchBox>
-          <input
-            type="text"
-            placeholder="Customized your placeholder"
-            style={inputStyle}
-            onPlacesChanged={aaa => console.log(aaa)}
-          />
-        </StandaloneSearchBox>
 
         <MapInfoWIndow stationObj={selectedStation} />
         {stations?.length > 1 && (
@@ -166,17 +170,18 @@ function Map() {
         )}
       </GoogleMap>
 
-      <select name="menu-areas" onChange={selectChangeHandler}>
-        {Object.keys(areaCenterPosition).map(key => (
-          <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng}>{key}</option>
-        ))}
-      </select>
-      <button onClick={() => panToHandler(areaCenterPosition.taichung)}> panto Button</button>
-
-      <Autocomplete onLoad={autocomplete => setAutoComplete(autocomplete)} onPlaceChanged={() => onPlaceChanged()}>
+      <div style={{ margin: '10px 0' }}>
+        <select name="menu-areas" onChange={selectChangeHandler}>
+          {Object.keys(areaCenterPosition).map(key => (
+            <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng + key}>{key}</option>
+          ))}
+        </select>
+        <button onClick={() => panToHandler(areaCenterPosition.taichung)}> panto Button</button>
+      </div>
+      <Autocomplete onLoad={autocomplete => setAutoComplete(autocomplete)} onPlaceChanged={onPlaceChanged}>
         <input
           type="text"
-          placeholder="Customized your placeholder"
+          placeholder="autocomplete"
           // style={{
           //   boxSizing: `border-box`,
           //   border: `1px solid transparent`,
@@ -194,6 +199,16 @@ function Map() {
           // }}
         />
       </Autocomplete>
+      <br />
+      <StandaloneSearchBox
+        onLoad={ref => setSearchBox(ref)}
+        onPlacesChanged={() => {
+          // console.log(searchBox.getPlaces())
+          console.log(searchBox.getPlaces()[0].geometry.location)
+        }}
+      >
+        <input type="text" placeholder="Google 地標 search" />
+      </StandaloneSearchBox>
     </>
   ) : (
     <></>
