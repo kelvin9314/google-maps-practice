@@ -11,4 +11,4 @@ export const areaCenterPosition = Object.freeze({
   chiayi: { lat: 23.4797837, lng: 120.4397206 },
 })
 
-export const defaultZoom = 14
+export const defaultZoom = 15

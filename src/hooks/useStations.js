@@ -3,7 +3,7 @@ import fetcher, { httpBuildQuery } from '../utils/api-client'
 
 const useStation = () => {
   const options = {
-    refreshInterval: 1000 * 60,
+    // refreshInterval: 1000 * 60 * 3,
   }
 
   const queryParams = {

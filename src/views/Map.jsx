@@ -11,6 +11,19 @@ import useStation from '../hooks/useStations'
 
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
 import { areaCenterPosition, defaultZoom } from '../utils/constant'
+import { searchStationByName } from '../utils/station-helpers'
+
+import MaterialAutocomplete from '@material-ui/lab/Autocomplete'
+import { makeStyles } from '@material-ui/core/styles'
+import {
+  TextField as MaterialTextField,
+  IconButton,
+  FormControl,
+  FormHelperText,
+  InputLabel,
+  NativeSelect,
+} from '@material-ui/core'
+import LocationCity from '@material-ui/icons/LocationCity'
 
 const containerStyle = {
   width: '100%',
@@ -47,15 +60,35 @@ const inputStyle = {
   fontSize: `14px`,
   outline: `none`,
   textOverflow: `ellipses`,
-  position: 'absolute',
-  top: '10px',
-  right: '100px',
 }
 
+const useStyles = makeStyles(theme => ({
+  formControl: {
+    margin: theme.spacing(1),
+    minWidth: 120,
+  },
+  selectEmpty: {
+    marginTop: theme.spacing(2),
+  },
+}))
+
 function Map() {
+  const classes = useStyles()
   const { data: stations, isError, isLoading } = useStation()
-  // console.log(stations)
+
+  // const stationSuggestArr = React.useMemo(() => {
+  //   const resultArr = []
+  //   if (stations?.length > 0) {
+  //     stations.forEach(station => resultArr.push(station.name_tw))
+  //   }
+  //   return resultArr
+  // }, [stations])
+
+  // console.log(stationSuggestArr)
+
   const [selectedStation, setSelectedStation] = React.useState({})
+  const [selectedCity, setSelectedCity] = React.useState(() => Object.keys(areaCenterPosition)[0])
+  console.log(selectedCity)
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -69,7 +102,6 @@ function Map() {
   const [map, setMap] = React.useState(null)
   const [autoComplete, setAutoComplete] = React.useState(null)
   const [searchBox, setSearchBox] = React.useState(null)
-
   const onLoad = React.useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds()
     map.fitBounds(bounds)
@@ -99,24 +131,35 @@ function Map() {
         lat: place.geometry.location.lat(),
         lng: place.geometry.location.lng(),
       }
-      console.log(latlng)
-      map.setZoom(16)
-      panToHandler(latlng)
+      panToWithZoomLevel(latlng, 16)
     } else {
       console.log('Autocomplete is not loaded yet!')
     }
   }
 
-  function panToHandler(latlng) {
-    map.panTo(latlng)
+  function panToWithZoomLevel(latlng, zoomLevel = 16) {
+    map.setZoom(zoomLevel)
     // const position = new window.google.maps.LatLng(latlng)
     // map.panTo(position)
+    map.panTo(latlng)
   }
 
-  function selectChangeHandler(e) {
+  function selectCityChangeHandler(e) {
     const areaKey = e.target.value
-    map.setZoom(14)
-    panToHandler(areaCenterPosition[areaKey])
+    setSelectedCity(areaKey)
+    panToWithZoomLevel(areaCenterPosition[areaKey], 14)
+  }
+
+  function stationSearchHandler(stations = [], queryString = '') {
+    queryString = queryString.trim()
+    if (!queryString) return
+
+    const targetStation = searchStationByName(stations, queryString)
+
+    if (targetStation?.lat && targetStation?.lng) {
+      const latlng = { lat: Number(targetStation.lat), lng: Number(targetStation.lng) }
+      panToWithZoomLevel(latlng, 16)
+    }
   }
 
   if (loadError) {
@@ -128,7 +171,7 @@ function Map() {
       <h1>Google Maps</h1>
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={areaCenterPosition.taipei}
+        center={areaCenterPosition[selectedCity]}
         zoom={defaultZoom}
         options={mapOptions}
         onLoad={onLoad}
@@ -171,44 +214,69 @@ function Map() {
       </GoogleMap>
 
       <div style={{ margin: '10px 0' }}>
-        <select name="menu-areas" onChange={selectChangeHandler}>
-          {Object.keys(areaCenterPosition).map(key => (
-            <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng + key}>{key}</option>
-          ))}
-        </select>
-        <button onClick={() => panToHandler(areaCenterPosition.taichung)}> panto Button</button>
+        <FormControl className={classes.formControl}>
+          <InputLabel htmlFor="age-native-helper">City</InputLabel>
+          <NativeSelect
+            value={selectedCity}
+            onChange={selectCityChangeHandler}
+            inputProps={{
+              name: 'age',
+              id: 'age-native-helper',
+            }}
+          >
+            {Object.keys(areaCenterPosition).map(key => (
+              <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng + key}>{key}</option>
+            ))}
+          </NativeSelect>
+          <FormHelperText>請選擇任一縣市</FormHelperText>
+        </FormControl>
+        <label htmlFor="icon-button-file">
+          <IconButton
+            color="primary"
+            aria-label="upload picture"
+            component="span"
+            onClick={() => panToWithZoomLevel(areaCenterPosition.taichung, 14)}
+            alt="Go To TaiChing"
+          >
+            <LocationCity />
+          </IconButton>
+        </label>
       </div>
-      <Autocomplete onLoad={autocomplete => setAutoComplete(autocomplete)} onPlaceChanged={onPlaceChanged}>
-        <input
-          type="text"
-          placeholder="autocomplete"
-          // style={{
-          //   boxSizing: `border-box`,
-          //   border: `1px solid transparent`,
-          //   width: `240px`,
-          //   height: `32px`,
-          //   padding: `0 12px`,
-          //   borderRadius: `3px`,
-          //   boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
-          //   fontSize: `14px`,
-          //   outline: `none`,
-          //   textOverflow: `ellipses`,
-          //   position: 'absolute',
-          //   left: '50%',
-          //   marginLeft: '-120px',
-          // }}
-        />
-      </Autocomplete>
-      <br />
-      <StandaloneSearchBox
-        onLoad={ref => setSearchBox(ref)}
-        onPlacesChanged={() => {
-          // console.log(searchBox.getPlaces())
-          console.log(searchBox.getPlaces()[0].geometry.location)
-        }}
-      >
-        <input type="text" placeholder="Google 地標 search" />
-      </StandaloneSearchBox>
+      <div className="container">
+        <div className="container__column">
+          <Autocomplete
+            className="autocomplete-list"
+            onLoad={autocomplete => setAutoComplete(autocomplete)}
+            onPlaceChanged={onPlaceChanged}
+          >
+            <MaterialTextField id="google-places-search" placeholder="請輸入地名/街名" label="Google地標 Search" />
+          </Autocomplete>
+          <br />
+          {/* <StandaloneSearchBox
+            onLoad={ref => setSearchBox(ref)}
+            onPlacesChanged={() => {
+              console.log(searchBox.getPlaces())
+              // console.log(searchBox.getPlaces()[0].geometry.location)
+            }}
+          >
+            <input type="text" placeholder="StandaloneSearchBox" style={inputStyle} />
+          </StandaloneSearchBox> */}
+        </div>
+        <div className="container__column">
+          <MaterialAutocomplete
+            id="combo-box-demo"
+            options={stations || []}
+            getOptionLabel={option => option.name_tw}
+            style={{ width: 300 }}
+            blurOnSelect={'mouse'} // 'mouse'| 'touch'| bool
+            onInputChange={(e, value) => stationSearchHandler(stations, value)}
+            // onHighlightChange={(e, option, reason) => console.log(option)}
+            renderInput={params => (
+              <MaterialTextField {...params} label="YouBike 站點" placeholder="請輸入站點名稱" variant="outlined" />
+            )}
+          />
+        </div>
+      </div>
     </>
   ) : (
     <></>

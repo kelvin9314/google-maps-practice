@@ -1,0 +1,22 @@
+.container {
+  display: flex;
+}
+
+.container__column {
+  flex: 1;
+  /* Space between columns */
+  margin: 0 8px;
+
+  /* Layout each column */
+  display: flex;
+  flex-direction: column;
+}
+
+.container__content {
+  /* Take available height */
+  flex: 1;
+}
+
+/* .autocomplete-list{
+  color: red
+} */
