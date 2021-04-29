@@ -159,6 +159,7 @@ function Map() {
     if (targetStation?.lat && targetStation?.lng) {
       const latlng = { lat: Number(targetStation.lat), lng: Number(targetStation.lng) }
       panToWithZoomLevel(latlng, 16)
+      toggleInfoWindow(targetStation)
     }
   }
 
