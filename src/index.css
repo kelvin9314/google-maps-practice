@@ -11,3 +11,8 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.station-map-container{position: relative;width: 95%;margin:20px auto 0;}
+.station-map-container .google{position: relative;width: 100%;overflow: hidden; height: 40vw;box-shadow:.3vw .4vw 0.3vw #f1f1f1;border-radius: .5rem; max-height: 500px}
+.station-map-container .google iframe{height: 100%; width: 100%}
+.station-map-container .google img{max-height: 100%;max-width: 100%;width: 100%;}

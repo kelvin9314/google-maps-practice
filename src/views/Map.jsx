@@ -10,7 +10,7 @@ import {
 import useStation from '../hooks/useStations'
 
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
-import { areaCenterPosition, defaultZoom } from '../utils/constant'
+import { areaCenterPosition, defaultZoom, defaultCenter } from '../utils/constant'
 import { searchStationByName } from '../utils/station-helpers'
 
 import MaterialAutocomplete from '@material-ui/lab/Autocomplete'
@@ -25,22 +25,41 @@ import {
 } from '@material-ui/core'
 import LocationCity from '@material-ui/icons/LocationCity'
 
-const containerStyle = {
-  width: '100%',
-  minWidth: '320px',
-  height: '33.33em',
+const mapContainerStyle = {
+  position: 'relative',
+  width: '95%',
+  margin: '20px auto 0',
 }
+
+const mapStyle = {
+  position: 'relative',
+  width: '100%',
+  overflow: 'hidden',
+  height: '40vw',
+  boxShadow: '0.3vw 0.4vw 0.3vw #f1f1f1',
+  borderRadius: '.5rem',
+  maxHeight: '500px',
+}
+
+const zoomLevelMap = Object.freeze({
+  wholeTaiwan: 7,
+  placeSearch: 16,
+  cityChange: 14,
+})
+
+const CENTER_OF_TAIWAN = { lat: 23.88467, lng: 120.990465 }
 
 const clustererOptions = {
   // averageCenter: true,
   // gridSize: 50, // default value is 60.
   // maxZoom: 20,
+  zoomOnClick: false,
   imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', // so you must have m1.png, m2.png, m3.png, m4.png, m5.png and m6.png in that folder
 }
 
 const mapOptions = {
   streetViewControl: false,
-  minZoom: 8,
+  minZoom: zoomLevelMap.wholeTaiwan,
 }
 
 function createKey(station) {
@@ -88,7 +107,6 @@ function Map() {
 
   const [selectedStation, setSelectedStation] = React.useState({})
   const [selectedCity, setSelectedCity] = React.useState(() => Object.keys(areaCenterPosition)[0])
-  console.log(selectedCity)
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -147,7 +165,7 @@ function Map() {
   function selectCityChangeHandler(e) {
     const areaKey = e.target.value
     setSelectedCity(areaKey)
-    panToWithZoomLevel(areaCenterPosition[areaKey], 14)
+    panToWithZoomLevel(areaCenterPosition[areaKey], zoomLevelMap.cityChange)
   }
 
   function stationSearchHandler(stations = [], queryString = '') {
@@ -158,8 +176,30 @@ function Map() {
 
     if (targetStation?.lat && targetStation?.lng) {
       const latlng = { lat: Number(targetStation.lat), lng: Number(targetStation.lng) }
-      panToWithZoomLevel(latlng, 16)
+      panToWithZoomLevel(latlng, zoomLevelMap.placeSearch)
       toggleInfoWindow(targetStation)
+    }
+  }
+
+  function stationSelectHandler(stationObj) {
+    if (!stationObj || !stationObj?.lat || !stationObj?.lng) return
+
+    const latlng = { lat: Number(stationObj.lat), lng: Number(stationObj.lng) }
+    panToWithZoomLevel(latlng, zoomLevelMap.placeSearch)
+    toggleInfoWindow(stationObj)
+  }
+
+  function searchBoxPlacesChangeHandler() {
+    const places = searchBox.getPlaces()
+    // console.log(places)
+    if (places?.length > 0) {
+      const tempPlaceLocation = places[0].geometry.location
+
+      const latlng = {
+        lat: tempPlaceLocation.lat(),
+        lng: tempPlaceLocation.lng(),
+      }
+      panToWithZoomLevel(latlng, zoomLevelMap.placeSearch)
     }
   }
 
@@ -170,59 +210,114 @@ function Map() {
   return isLoaded ? (
     <>
       <h1>Google Maps</h1>
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={areaCenterPosition[selectedCity]}
-        zoom={defaultZoom}
-        options={mapOptions}
-        onLoad={onLoad}
-        onUnmount={onUnmount}
-      >
-        {/* Child components, such as markers, info windows, etc. */}
 
-        <MapInfoWIndow stationObj={selectedStation} />
-        {stations?.length > 1 && (
-          <MarkerClusterer options={clustererOptions}>
-            {clusterer =>
-              stations
-                // .filter(a => a.area_code === '00')
-                .map(station => {
-                  const position = {
-                    lat: Number(station.lat),
-                    lng: Number(station.lng),
-                  }
-                  return (
-                    <Marker
-                      key={createKey(station)}
-                      // cursor={station.name_tw}
-                      title={station.name_tw}
-                      onLoad={onLoadMarker}
-                      icon={'https://img.icons8.com/doodle/30/000000/marker--v1.png'}
-                      position={position}
-                      clusterer={clusterer}
-                      // animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
-                      onClick={() => toggleInfoWindow(station)}
-                      // onMouseOver={() => toggleInfoWindow(station)}
-                      // onMouseUp={() => console.log('onMouseUp')}
-                      // onMouseOut={() => console.log('onMouseOut')}
-                      onRightClick={() => console.log('onRightClick')}
-                    />
-                  )
-                })
-            }
-          </MarkerClusterer>
-        )}
-      </GoogleMap>
+      <div className="container">
+        <div className="container__column">
+          <Autocomplete
+            className="autocomplete-list"
+            onLoad={autocomplete => setAutoComplete(autocomplete)}
+            onPlaceChanged={onPlaceChanged}
+          >
+            <MaterialTextField
+              id="google-places-search-autocomplete"
+              placeholder="請輸入地名/街名 1"
+              label="Google地標 Autocomplete"
+              variant="filled"
+            />
+          </Autocomplete>
+          <br />
+          <StandaloneSearchBox onLoad={ref => setSearchBox(ref)} onPlacesChanged={searchBoxPlacesChangeHandler}>
+            <MaterialTextField
+              id="google-places-search-standalonebox"
+              placeholder="請輸入地名/街名 2"
+              label="Google地標 Standalone"
+              variant="outlined"
+            />
+          </StandaloneSearchBox>
+        </div>
+        <div className="container__column">
+          <MaterialAutocomplete
+            id="combo-box-demo"
+            options={stations || []}
+            getOptionLabel={option => option.name_tw}
+            style={{ width: 300 }}
+            blurOnSelect={true} // 'mouse'| 'touch'| bool
+            // onInputChange={(e, value) => {
+            //   console.log(stations)
+            //   console.log(value)
+            //   // stationSearchHandler(stations, value)
+            // }}
+            // onHighlightChange={(e, option, reason) => {
+            //   console.log(option)
+            // }}
+            onChange={(e, value, reason) => {
+              if (!value) return
+              console.log('onChange')
+              // console.log(value)
+              stationSelectHandler(value)
+            }}
+            renderInput={params => (
+              <MaterialTextField {...params} label="YouBike 站點" placeholder="請輸入站點名稱" variant="outlined" />
+            )}
+          />
+        </div>
+      </div>
 
+      <div style={mapContainerStyle}>
+        <GoogleMap
+          mapContainerStyle={mapStyle}
+          // center={areaCenterPosition[selectedCity]}
+          center={CENTER_OF_TAIWAN}
+          zoom={zoomLevelMap.wholeTaiwan}
+          options={mapOptions}
+          onLoad={onLoad}
+          onUnmount={onUnmount}
+        >
+          {/* Child components, such as markers, info windows, etc. */}
+
+          <MapInfoWIndow stationObj={selectedStation} />
+          {stations?.length > 1 && (
+            <MarkerClusterer options={clustererOptions}>
+              {clusterer =>
+                stations
+                  // .filter(a => a.area_code === '00')
+                  .map(station => {
+                    const position = {
+                      lat: Number(station.lat),
+                      lng: Number(station.lng),
+                    }
+                    return (
+                      <Marker
+                        key={createKey(station)}
+                        // cursor={station.name_tw}
+                        title={station.name_tw}
+                        onLoad={onLoadMarker}
+                        icon={'https://img.icons8.com/doodle/30/000000/marker--v1.png'}
+                        position={position}
+                        clusterer={clusterer}
+                        // animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
+                        onClick={() => toggleInfoWindow(station)}
+                        // onMouseOver={() => toggleInfoWindow(station)}
+                        // onMouseUp={() => console.log('onMouseUp')}
+                        // onMouseOut={() => console.log('onMouseOut')}
+                        onRightClick={() => console.log('onRightClick')}
+                      />
+                    )
+                  })
+              }
+            </MarkerClusterer>
+          )}
+        </GoogleMap>
+      </div>
       <div style={{ margin: '10px 0' }}>
         <FormControl className={classes.formControl}>
-          <InputLabel htmlFor="age-native-helper">City</InputLabel>
+          <InputLabel htmlFor="City-native-helper">City</InputLabel>
           <NativeSelect
             value={selectedCity}
             onChange={selectCityChangeHandler}
             inputProps={{
-              name: 'age',
-              id: 'age-native-helper',
+              name: 'City',
+              id: 'City-native-helper',
             }}
           >
             {Object.keys(areaCenterPosition).map(key => (
@@ -236,47 +331,12 @@ function Map() {
             color="primary"
             aria-label="upload picture"
             component="span"
-            onClick={() => panToWithZoomLevel(areaCenterPosition.taichung, 14)}
+            onClick={() => panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelMap.wholeTaiwan)}
             alt="Go To TaiChing"
           >
             <LocationCity />
           </IconButton>
         </label>
-      </div>
-      <div className="container">
-        <div className="container__column">
-          <Autocomplete
-            className="autocomplete-list"
-            onLoad={autocomplete => setAutoComplete(autocomplete)}
-            onPlaceChanged={onPlaceChanged}
-          >
-            <MaterialTextField id="google-places-search" placeholder="請輸入地名/街名" label="Google地標 Search" />
-          </Autocomplete>
-          <br />
-          {/* <StandaloneSearchBox
-            onLoad={ref => setSearchBox(ref)}
-            onPlacesChanged={() => {
-              console.log(searchBox.getPlaces())
-              // console.log(searchBox.getPlaces()[0].geometry.location)
-            }}
-          >
-            <input type="text" placeholder="StandaloneSearchBox" style={inputStyle} />
-          </StandaloneSearchBox> */}
-        </div>
-        <div className="container__column">
-          <MaterialAutocomplete
-            id="combo-box-demo"
-            options={stations || []}
-            getOptionLabel={option => option.name_tw}
-            style={{ width: 300 }}
-            blurOnSelect={'mouse'} // 'mouse'| 'touch'| bool
-            onInputChange={(e, value) => stationSearchHandler(stations, value)}
-            // onHighlightChange={(e, option, reason) => console.log(option)}
-            renderInput={params => (
-              <MaterialTextField {...params} label="YouBike 站點" placeholder="請輸入站點名稱" variant="outlined" />
-            )}
-          />
-        </div>
       </div>
     </>
   ) : (
