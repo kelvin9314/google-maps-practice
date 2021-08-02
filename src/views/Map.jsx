@@ -41,7 +41,7 @@ const mapStyle = {
   maxHeight: '500px',
 }
 
-const zoomLevelMap = Object.freeze({
+const zoomLevel = Object.freeze({
   wholeTaiwan: 7,
   placeSearch: 16,
   cityChange: 14,
@@ -51,15 +51,17 @@ const CENTER_OF_TAIWAN = { lat: 23.88467, lng: 120.990465 }
 
 const clustererOptions = {
   // averageCenter: true,
-  // gridSize: 50, // default value is 60.
-  // maxZoom: 20,
-  zoomOnClick: false,
+  // gridSize: 30, // default value is 60.
+  maxZoom: 16,
+  minimumClusterSize: 4,
+  zoomOnClick: true,
   imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', // so you must have m1.png, m2.png, m3.png, m4.png, m5.png and m6.png in that folder
+  ignoreHidden: true, // 如果 marker 需要有條件設定 visible, 這邊也要打開
 }
 
 const mapOptions = {
   streetViewControl: false,
-  minZoom: zoomLevelMap.wholeTaiwan,
+  minZoom: zoomLevel.wholeTaiwan,
 }
 
 function createKey(station) {
@@ -93,17 +95,8 @@ const useStyles = makeStyles(theme => ({
 
 function Map() {
   const classes = useStyles()
+  const infoWindowRef = React.useRef(null)
   const { data: stations, isError, isLoading } = useStation()
-
-  // const stationSuggestArr = React.useMemo(() => {
-  //   const resultArr = []
-  //   if (stations?.length > 0) {
-  //     stations.forEach(station => resultArr.push(station.name_tw))
-  //   }
-  //   return resultArr
-  // }, [stations])
-
-  // console.log(stationSuggestArr)
 
   const [selectedStation, setSelectedStation] = React.useState({})
   const [selectedCity, setSelectedCity] = React.useState(() => Object.keys(areaCenterPosition)[0])
@@ -120,6 +113,8 @@ function Map() {
   const [map, setMap] = React.useState(null)
   const [autoComplete, setAutoComplete] = React.useState(null)
   const [searchBox, setSearchBox] = React.useState(null)
+
+  const [isMarkerShow, setIsMarkerShow] = React.useState(false)
   const onLoad = React.useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds()
     map.fitBounds(bounds)
@@ -134,8 +129,27 @@ function Map() {
     // console.log('marker: ', marker)
   }
 
+  React.useEffect(() => {
+    console.log(map)
+    if (map) {
+      console.log(isLoaded)
+      console.log('mappppppppppppppp')
+      map.setCenter(CENTER_OF_TAIWAN)
+    }
+  }, [map])
+
+  const zoomLevelChecker = () => {
+    if (!map) return
+    console.log('zoom level: ', map.getZoom())
+    console.log(infoWindowRef)
+    if (map.getZoom() >= 12) {
+      setIsMarkerShow(true)
+    } else {
+      setIsMarkerShow(false)
+    }
+  }
+
   const toggleInfoWindow = station => {
-    console.log(station)
     setSelectedStation({ ...station })
   }
 
@@ -149,23 +163,24 @@ function Map() {
         lat: place.geometry.location.lat(),
         lng: place.geometry.location.lng(),
       }
-      panToWithZoomLevel(latlng, 16)
+      panToWithZoomLevel(latlng, zoomLevel.placeSearch)
     } else {
       console.log('Autocomplete is not loaded yet!')
     }
   }
 
   function panToWithZoomLevel(latlng, zoomLevel = 16) {
-    map.setZoom(zoomLevel)
-    // const position = new window.google.maps.LatLng(latlng)
-    // map.panTo(position)
     map.panTo(latlng)
+    map.setZoom(zoomLevel)
   }
 
   function selectCityChangeHandler(e) {
     const areaKey = e.target.value
+    console.log('city changed')
+    const targetCityObj = { ...areaCenterPosition[areaKey] }
+    console.log(targetCityObj)
     setSelectedCity(areaKey)
-    panToWithZoomLevel(areaCenterPosition[areaKey], zoomLevelMap.cityChange)
+    panToWithZoomLevel(targetCityObj, zoomLevel.cityChange)
   }
 
   function stationSearchHandler(stations = [], queryString = '') {
@@ -176,7 +191,7 @@ function Map() {
 
     if (targetStation?.lat && targetStation?.lng) {
       const latlng = { lat: Number(targetStation.lat), lng: Number(targetStation.lng) }
-      panToWithZoomLevel(latlng, zoomLevelMap.placeSearch)
+      panToWithZoomLevel(latlng, zoomLevel.placeSearch)
       toggleInfoWindow(targetStation)
     }
   }
@@ -185,7 +200,7 @@ function Map() {
     if (!stationObj || !stationObj?.lat || !stationObj?.lng) return
 
     const latlng = { lat: Number(stationObj.lat), lng: Number(stationObj.lng) }
-    panToWithZoomLevel(latlng, zoomLevelMap.placeSearch)
+    panToWithZoomLevel(latlng, zoomLevel.placeSearch)
     toggleInfoWindow(stationObj)
   }
 
@@ -199,7 +214,7 @@ function Map() {
         lat: tempPlaceLocation.lat(),
         lng: tempPlaceLocation.lng(),
       }
-      panToWithZoomLevel(latlng, zoomLevelMap.placeSearch)
+      panToWithZoomLevel(latlng, zoomLevel.placeSearch)
     }
   }
 
@@ -267,15 +282,18 @@ function Map() {
         <GoogleMap
           mapContainerStyle={mapStyle}
           // center={areaCenterPosition[selectedCity]}
-          center={CENTER_OF_TAIWAN}
-          zoom={zoomLevelMap.wholeTaiwan}
+          center={undefined}
+          // center={{ lat: 23.88467, lng: 120.990465 }}
+          zoom={zoomLevel.wholeTaiwan}
+          onZoomChanged={() => zoomLevelChecker()}
           options={mapOptions}
           onLoad={onLoad}
           onUnmount={onUnmount}
         >
           {/* Child components, such as markers, info windows, etc. */}
 
-          <MapInfoWIndow stationObj={selectedStation} />
+          <MapInfoWIndow stationObj={selectedStation} ref={infoWindowRef} />
+
           {stations?.length > 1 && (
             <MarkerClusterer options={clustererOptions}>
               {clusterer =>
@@ -295,8 +313,9 @@ function Map() {
                         icon={'https://img.icons8.com/doodle/30/000000/marker--v1.png'}
                         position={position}
                         clusterer={clusterer}
-                        // animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
+                        animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
                         onClick={() => toggleInfoWindow(station)}
+                        visible={isMarkerShow}
                         // onMouseOver={() => toggleInfoWindow(station)}
                         // onMouseUp={() => console.log('onMouseUp')}
                         // onMouseOut={() => console.log('onMouseOut')}
@@ -331,7 +350,10 @@ function Map() {
             color="primary"
             aria-label="upload picture"
             component="span"
-            onClick={() => panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelMap.wholeTaiwan)}
+            onClick={() => {
+              console.log('pan to center of TW')
+              panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevel.wholeTaiwan)
+            }}
             alt="Go To TaiChing"
           >
             <LocationCity />
