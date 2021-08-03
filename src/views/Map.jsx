@@ -8,7 +8,7 @@ import {
   Autocomplete,
 } from '@react-google-maps/api'
 import useStation from '../hooks/useStations'
-
+import { useImmer } from 'use-immer'
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
 import { areaCenterPosition, defaultZoom, defaultCenter } from '../utils/constant'
 import { searchStationByName } from '../utils/station-helpers'
@@ -24,16 +24,6 @@ import {
   NativeSelect,
 } from '@material-ui/core'
 import LocationCity from '@material-ui/icons/LocationCity'
-
-const mapStyle = {
-  position: 'relative',
-  width: '100%',
-  overflow: 'hidden',
-  height: '40vw',
-  boxShadow: '0.3vw 0.4vw 0.3vw #f1f1f1',
-  borderRadius: '.5rem',
-  maxHeight: '500px',
-}
 
 const zoomLevel = Object.freeze({
   wholeTaiwan: 7,
@@ -93,7 +83,7 @@ function Map() {
   const { data: stations, isError, isLoading } = useStation()
 
   const [selectedStation, setSelectedStation] = React.useState({})
-  const [selectedCity, setSelectedCity] = React.useState(() => Object.keys(areaCenterPosition)[0])
+  const [selectedCity, setSelectedCity] = React.useState('') // NOTE : key name of area only
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -107,15 +97,17 @@ function Map() {
   const [map, setMap] = React.useState(null)
   const [autoComplete, setAutoComplete] = React.useState(null)
   const [searchBox, setSearchBox] = React.useState(null)
-
   const [isMarkerShow, setIsMarkerShow] = React.useState(false)
-  const onLoad = React.useCallback(function callback(map) {
+  const [displayInfo, setDisplayInfo] = useImmer({
+    centerOfMap: CENTER_OF_TAIWAN,
+  })
+  const onLoadMap = React.useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds()
     map.fitBounds(bounds)
     setMap(map)
   }, [])
 
-  const onUnmount = React.useCallback(function callback(map) {
+  const onUnmountMap = React.useCallback(function callback(map) {
     setMap(null)
   }, [])
 
@@ -124,18 +116,21 @@ function Map() {
   }
 
   React.useEffect(() => {
-    console.log(map)
-    if (map) {
-      console.log(isLoaded)
-      console.log('mappppppppppppppp')
-      map.setCenter(CENTER_OF_TAIWAN)
+    if (!map) return
+
+    // NOTE : for the center position display when Map is initialed
+    if (selectedCity) {
+      panToWithZoomLevel(areaCenterPosition[selectedCity], zoomLevel.cityChange)
+    } else {
+      panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevel.wholeTaiwan)
     }
-  }, [map])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, selectedCity])
 
   const zoomLevelChecker = () => {
     if (!map) return
     console.log('zoom level: ', map.getZoom())
-    console.log(infoWindowRef)
+    // console.log(infoWindowRef)
     if (map.getZoom() >= 12) {
       setIsMarkerShow(true)
     } else {
@@ -159,7 +154,7 @@ function Map() {
       }
       panToWithZoomLevel(latlng, zoomLevel.placeSearch)
     } else {
-      console.log('Autocomplete is not loaded yet!')
+      console.log('Autocomplete not loaded yet!')
     }
   }
 
@@ -170,11 +165,13 @@ function Map() {
 
   function selectCityChangeHandler(e) {
     const areaKey = e.target.value
-    console.log('city changed')
-    const targetCityObj = { ...areaCenterPosition[areaKey] }
-    console.log(targetCityObj)
+    // const targetCityObj = { ...areaCenterPosition[areaKey] }
     setSelectedCity(areaKey)
-    panToWithZoomLevel(targetCityObj, zoomLevel.cityChange)
+    // panToWithZoomLevel(targetCityObj, zoomLevel.cityChange)
+    // setDisplayInfo(draft => {
+    //   draft.centerOfMap = targetCityObj
+    // })
+    // map.setZoom(zoomLevel.cityChange)
   }
 
   function stationSearchHandler(stations = [], queryString = '') {
@@ -261,7 +258,6 @@ function Map() {
               // }}
               onChange={(e, value, reason) => {
                 if (!value) return
-                console.log('onChange')
                 // console.log(value)
                 stationSelectHandler(value)
               }}
@@ -274,16 +270,17 @@ function Map() {
 
         <div className="station-map-container">
           <GoogleMap
-            // mapContainerStyle={mapStyle}
             mapContainerClassName="google"
             // center={areaCenterPosition[selectedCity]}
-            center={undefined}
+            center={displayInfo.centerOfMap}
             // center={{ lat: 23.88467, lng: 120.990465 }}
             zoom={zoomLevel.wholeTaiwan}
             onZoomChanged={() => zoomLevelChecker()}
             options={mapOptions}
-            onLoad={onLoad}
-            onUnmount={onUnmount}
+            onLoad={onLoadMap}
+            onUnmount={onUnmountMap}
+            // onDragEnd={() => console.log('onDragEnd')}
+            // onCenterChanged={() => console.log('onCenterChanged')}
           >
             {/* Child components, such as markers, info windows, etc. */}
 
@@ -325,7 +322,7 @@ function Map() {
         </div>
         <div style={{ margin: '10px 0' }}>
           <FormControl className={classes.formControl}>
-            <InputLabel htmlFor="City-native-helper">City</InputLabel>
+            <InputLabel htmlFor="City-native-helper">請選縣市</InputLabel>
             <NativeSelect
               value={selectedCity}
               onChange={selectCityChangeHandler}
@@ -334,11 +331,14 @@ function Map() {
                 id: 'City-native-helper',
               }}
             >
+              <option aria-label="None" value="" />
               {Object.keys(areaCenterPosition).map(key => (
-                <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng + key}>{key}</option>
+                <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng + key} value={key}>
+                  {key}
+                </option>
               ))}
             </NativeSelect>
-            <FormHelperText>請選擇任一縣市</FormHelperText>
+            <FormHelperText>未選預設為全台</FormHelperText>
           </FormControl>
           <label htmlFor="icon-button-file">
             <IconButton
@@ -346,7 +346,7 @@ function Map() {
               aria-label="upload picture"
               component="span"
               onClick={() => {
-                console.log('pan to center of TW')
+                // console.log('pan to center of TW')
                 panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevel.wholeTaiwan)
               }}
               alt="Go To TaiChing"
