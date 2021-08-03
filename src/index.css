@@ -12,7 +12,36 @@ code {
     monospace;
 }
 
+.page-container{
+  position: relative;
+  padding: 15px;
+  min-height: 900px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.station-map-container .google {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  height: 40vw;
+  box-shadow: 0.3vw 0.4vw 0.3vw #f1f1f1;
+  border-radius: .5rem;
+  max-height: 500px;
+}
+
+
 .station-map-container{position: relative;width: 95%;margin:20px auto 0;}
 .station-map-container .google{position: relative;width: 100%;overflow: hidden; height: 40vw;box-shadow:.3vw .4vw 0.3vw #f1f1f1;border-radius: .5rem; max-height: 500px}
 .station-map-container .google iframe{height: 100%; width: 100%}
 .station-map-container .google img{max-height: 100%;max-width: 100%;width: 100%;}
+
+.station-item-container{
+  position: relative;
+  width: 95%;
+  display: flex;
+  flex-direction: row;
+  padding: 3vw 0 .5vw;
+  justify-content: flex-start;
+  margin: 0 auto;
+}

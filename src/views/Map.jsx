@@ -25,12 +25,6 @@ import {
 } from '@material-ui/core'
 import LocationCity from '@material-ui/icons/LocationCity'
 
-const mapContainerStyle = {
-  position: 'relative',
-  width: '95%',
-  margin: '20px auto 0',
-}
-
 const mapStyle = {
   position: 'relative',
   width: '100%',
@@ -225,140 +219,142 @@ function Map() {
   return isLoaded ? (
     <>
       <h1>Google Maps</h1>
-
-      <div className="container">
-        <div className="container__column">
-          <Autocomplete
-            className="autocomplete-list"
-            onLoad={autocomplete => setAutoComplete(autocomplete)}
-            onPlaceChanged={onPlaceChanged}
-          >
-            <MaterialTextField
-              id="google-places-search-autocomplete"
-              placeholder="請輸入地名/街名 1"
-              label="Google地標 Autocomplete"
-              variant="filled"
+      <div className="page-container">
+        <div className="control_container">
+          <div className="control_column">
+            <Autocomplete
+              className="autocomplete-list"
+              onLoad={autocomplete => setAutoComplete(autocomplete)}
+              onPlaceChanged={onPlaceChanged}
+            >
+              <MaterialTextField
+                id="google-places-search-autocomplete"
+                placeholder="請輸入地名/街名 1"
+                label="Google地標 Autocomplete"
+                variant="filled"
+              />
+            </Autocomplete>
+            <br />
+            <StandaloneSearchBox onLoad={ref => setSearchBox(ref)} onPlacesChanged={searchBoxPlacesChangeHandler}>
+              <MaterialTextField
+                id="google-places-search-standalonebox"
+                placeholder="請輸入地名/街名 2"
+                label="Google地標 Standalone"
+                variant="outlined"
+              />
+            </StandaloneSearchBox>
+          </div>
+          <div className="control_column">
+            <MaterialAutocomplete
+              id="combo-box-demo"
+              options={stations || []}
+              getOptionLabel={option => option.name_tw}
+              style={{ width: 300 }}
+              blurOnSelect={true} // 'mouse'| 'touch'| bool
+              // onInputChange={(e, value) => {
+              //   console.log(stations)
+              //   console.log(value)
+              //   // stationSearchHandler(stations, value)
+              // }}
+              // onHighlightChange={(e, option, reason) => {
+              //   console.log(option)
+              // }}
+              onChange={(e, value, reason) => {
+                if (!value) return
+                console.log('onChange')
+                // console.log(value)
+                stationSelectHandler(value)
+              }}
+              renderInput={params => (
+                <MaterialTextField {...params} label="YouBike 站點" placeholder="請輸入站點名稱" variant="outlined" />
+              )}
             />
-          </Autocomplete>
-          <br />
-          <StandaloneSearchBox onLoad={ref => setSearchBox(ref)} onPlacesChanged={searchBoxPlacesChangeHandler}>
-            <MaterialTextField
-              id="google-places-search-standalonebox"
-              placeholder="請輸入地名/街名 2"
-              label="Google地標 Standalone"
-              variant="outlined"
-            />
-          </StandaloneSearchBox>
+          </div>
         </div>
-        <div className="container__column">
-          <MaterialAutocomplete
-            id="combo-box-demo"
-            options={stations || []}
-            getOptionLabel={option => option.name_tw}
-            style={{ width: 300 }}
-            blurOnSelect={true} // 'mouse'| 'touch'| bool
-            // onInputChange={(e, value) => {
-            //   console.log(stations)
-            //   console.log(value)
-            //   // stationSearchHandler(stations, value)
-            // }}
-            // onHighlightChange={(e, option, reason) => {
-            //   console.log(option)
-            // }}
-            onChange={(e, value, reason) => {
-              if (!value) return
-              console.log('onChange')
-              // console.log(value)
-              stationSelectHandler(value)
-            }}
-            renderInput={params => (
-              <MaterialTextField {...params} label="YouBike 站點" placeholder="請輸入站點名稱" variant="outlined" />
+
+        <div className="station-map-container">
+          <GoogleMap
+            // mapContainerStyle={mapStyle}
+            mapContainerClassName="google"
+            // center={areaCenterPosition[selectedCity]}
+            center={undefined}
+            // center={{ lat: 23.88467, lng: 120.990465 }}
+            zoom={zoomLevel.wholeTaiwan}
+            onZoomChanged={() => zoomLevelChecker()}
+            options={mapOptions}
+            onLoad={onLoad}
+            onUnmount={onUnmount}
+          >
+            {/* Child components, such as markers, info windows, etc. */}
+
+            <MapInfoWIndow stationObj={selectedStation} ref={infoWindowRef} />
+
+            {stations?.length > 1 && (
+              <MarkerClusterer options={clustererOptions}>
+                {clusterer =>
+                  stations
+                    // .filter(a => a.area_code === '00')
+                    .map(station => {
+                      const position = {
+                        lat: Number(station.lat),
+                        lng: Number(station.lng),
+                      }
+                      return (
+                        <Marker
+                          key={createKey(station)}
+                          // cursor={station.name_tw}
+                          title={station.name_tw}
+                          onLoad={onLoadMarker}
+                          icon={'https://img.icons8.com/doodle/30/000000/marker--v1.png'}
+                          position={position}
+                          clusterer={clusterer}
+                          animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
+                          onClick={() => toggleInfoWindow(station)}
+                          visible={isMarkerShow}
+                          // onMouseOver={() => toggleInfoWindow(station)}
+                          // onMouseUp={() => console.log('onMouseUp')}
+                          // onMouseOut={() => console.log('onMouseOut')}
+                          onRightClick={() => console.log('onRightClick')}
+                        />
+                      )
+                    })
+                }
+              </MarkerClusterer>
             )}
-          />
+          </GoogleMap>
         </div>
-      </div>
-
-      <div style={mapContainerStyle}>
-        <GoogleMap
-          mapContainerStyle={mapStyle}
-          // center={areaCenterPosition[selectedCity]}
-          center={undefined}
-          // center={{ lat: 23.88467, lng: 120.990465 }}
-          zoom={zoomLevel.wholeTaiwan}
-          onZoomChanged={() => zoomLevelChecker()}
-          options={mapOptions}
-          onLoad={onLoad}
-          onUnmount={onUnmount}
-        >
-          {/* Child components, such as markers, info windows, etc. */}
-
-          <MapInfoWIndow stationObj={selectedStation} ref={infoWindowRef} />
-
-          {stations?.length > 1 && (
-            <MarkerClusterer options={clustererOptions}>
-              {clusterer =>
-                stations
-                  // .filter(a => a.area_code === '00')
-                  .map(station => {
-                    const position = {
-                      lat: Number(station.lat),
-                      lng: Number(station.lng),
-                    }
-                    return (
-                      <Marker
-                        key={createKey(station)}
-                        // cursor={station.name_tw}
-                        title={station.name_tw}
-                        onLoad={onLoadMarker}
-                        icon={'https://img.icons8.com/doodle/30/000000/marker--v1.png'}
-                        position={position}
-                        clusterer={clusterer}
-                        animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
-                        onClick={() => toggleInfoWindow(station)}
-                        visible={isMarkerShow}
-                        // onMouseOver={() => toggleInfoWindow(station)}
-                        // onMouseUp={() => console.log('onMouseUp')}
-                        // onMouseOut={() => console.log('onMouseOut')}
-                        onRightClick={() => console.log('onRightClick')}
-                      />
-                    )
-                  })
-              }
-            </MarkerClusterer>
-          )}
-        </GoogleMap>
-      </div>
-      <div style={{ margin: '10px 0' }}>
-        <FormControl className={classes.formControl}>
-          <InputLabel htmlFor="City-native-helper">City</InputLabel>
-          <NativeSelect
-            value={selectedCity}
-            onChange={selectCityChangeHandler}
-            inputProps={{
-              name: 'City',
-              id: 'City-native-helper',
-            }}
-          >
-            {Object.keys(areaCenterPosition).map(key => (
-              <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng + key}>{key}</option>
-            ))}
-          </NativeSelect>
-          <FormHelperText>請選擇任一縣市</FormHelperText>
-        </FormControl>
-        <label htmlFor="icon-button-file">
-          <IconButton
-            color="primary"
-            aria-label="upload picture"
-            component="span"
-            onClick={() => {
-              console.log('pan to center of TW')
-              panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevel.wholeTaiwan)
-            }}
-            alt="Go To TaiChing"
-          >
-            <LocationCity />
-          </IconButton>
-        </label>
+        <div style={{ margin: '10px 0' }}>
+          <FormControl className={classes.formControl}>
+            <InputLabel htmlFor="City-native-helper">City</InputLabel>
+            <NativeSelect
+              value={selectedCity}
+              onChange={selectCityChangeHandler}
+              inputProps={{
+                name: 'City',
+                id: 'City-native-helper',
+              }}
+            >
+              {Object.keys(areaCenterPosition).map(key => (
+                <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng + key}>{key}</option>
+              ))}
+            </NativeSelect>
+            <FormHelperText>請選擇任一縣市</FormHelperText>
+          </FormControl>
+          <label htmlFor="icon-button-file">
+            <IconButton
+              color="primary"
+              aria-label="upload picture"
+              component="span"
+              onClick={() => {
+                console.log('pan to center of TW')
+                panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevel.wholeTaiwan)
+              }}
+              alt="Go To TaiChing"
+            >
+              <LocationCity />
+            </IconButton>
+          </label>
+        </div>
       </div>
     </>
   ) : (
