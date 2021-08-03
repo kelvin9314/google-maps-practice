@@ -6,11 +6,12 @@ import {
   MarkerClusterer,
   StandaloneSearchBox,
   Autocomplete,
+  OverlayView,
 } from '@react-google-maps/api'
 import useStation from '../hooks/useStations'
 import { useImmer } from 'use-immer'
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
-import { areaCenterPosition, defaultZoom, defaultCenter } from '../utils/constant'
+import { areaConfig, defaultZoom, CENTER_OF_TAIWAN } from '../utils/constant'
 import { searchStationByName } from '../utils/station-helpers'
 
 import MaterialAutocomplete from '@material-ui/lab/Autocomplete'
@@ -25,13 +26,11 @@ import {
 } from '@material-ui/core'
 import LocationCity from '@material-ui/icons/LocationCity'
 
-const zoomLevel = Object.freeze({
+const zoomLevelConfig = Object.freeze({
   wholeTaiwan: 7,
   placeSearch: 16,
   cityChange: 14,
 })
-
-const CENTER_OF_TAIWAN = { lat: 23.88467, lng: 120.990465 }
 
 const clustererOptions = {
   // averageCenter: true,
@@ -45,7 +44,7 @@ const clustererOptions = {
 
 const mapOptions = {
   streetViewControl: false,
-  minZoom: zoomLevel.wholeTaiwan,
+  minZoom: zoomLevelConfig.wholeTaiwan,
 }
 
 function createKey(station) {
@@ -120,9 +119,9 @@ function Map() {
 
     // NOTE : for the center position display when Map is initialed
     if (selectedCity) {
-      panToWithZoomLevel(areaCenterPosition[selectedCity], zoomLevel.cityChange)
+      panToWithZoomLevel(areaConfig[selectedCity].position, zoomLevelConfig.cityChange)
     } else {
-      panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevel.wholeTaiwan)
+      panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, selectedCity])
@@ -152,26 +151,26 @@ function Map() {
         lat: place.geometry.location.lat(),
         lng: place.geometry.location.lng(),
       }
-      panToWithZoomLevel(latlng, zoomLevel.placeSearch)
+      panToWithZoomLevel(latlng, zoomLevelConfig.placeSearch)
     } else {
       console.log('Autocomplete not loaded yet!')
     }
   }
 
-  function panToWithZoomLevel(latlng, zoomLevel = 16) {
+  function panToWithZoomLevel(latlng, zoomLevelConfig = 16) {
     map.panTo(latlng)
-    map.setZoom(zoomLevel)
+    map.setZoom(zoomLevelConfig)
   }
 
   function selectCityChangeHandler(e) {
     const areaKey = e.target.value
-    // const targetCityObj = { ...areaCenterPosition[areaKey] }
+    // const targetCityObj = { ...areaConfig[areaKey].position }
     setSelectedCity(areaKey)
-    // panToWithZoomLevel(targetCityObj, zoomLevel.cityChange)
+    // panToWithZoomLevel(targetCityObj, zoomLevelConfig.cityChange)
     // setDisplayInfo(draft => {
     //   draft.centerOfMap = targetCityObj
     // })
-    // map.setZoom(zoomLevel.cityChange)
+    // map.setZoom(zoomLevelConfig.cityChange)
   }
 
   function stationSearchHandler(stations = [], queryString = '') {
@@ -182,7 +181,7 @@ function Map() {
 
     if (targetStation?.lat && targetStation?.lng) {
       const latlng = { lat: Number(targetStation.lat), lng: Number(targetStation.lng) }
-      panToWithZoomLevel(latlng, zoomLevel.placeSearch)
+      panToWithZoomLevel(latlng, zoomLevelConfig.placeSearch)
       toggleInfoWindow(targetStation)
     }
   }
@@ -191,7 +190,7 @@ function Map() {
     if (!stationObj || !stationObj?.lat || !stationObj?.lng) return
 
     const latlng = { lat: Number(stationObj.lat), lng: Number(stationObj.lng) }
-    panToWithZoomLevel(latlng, zoomLevel.placeSearch)
+    panToWithZoomLevel(latlng, zoomLevelConfig.placeSearch)
     toggleInfoWindow(stationObj)
   }
 
@@ -205,7 +204,7 @@ function Map() {
         lat: tempPlaceLocation.lat(),
         lng: tempPlaceLocation.lng(),
       }
-      panToWithZoomLevel(latlng, zoomLevel.placeSearch)
+      panToWithZoomLevel(latlng, zoomLevelConfig.placeSearch)
     }
   }
 
@@ -271,10 +270,8 @@ function Map() {
         <div className="station-map-container">
           <GoogleMap
             mapContainerClassName="google"
-            // center={areaCenterPosition[selectedCity]}
             center={displayInfo.centerOfMap}
-            // center={{ lat: 23.88467, lng: 120.990465 }}
-            zoom={zoomLevel.wholeTaiwan}
+            zoom={zoomLevelConfig.wholeTaiwan}
             onZoomChanged={() => zoomLevelChecker()}
             options={mapOptions}
             onLoad={onLoadMap}
@@ -332,9 +329,9 @@ function Map() {
               }}
             >
               <option aria-label="None" value="" />
-              {Object.keys(areaCenterPosition).map(key => (
-                <option key={areaCenterPosition[key].lat + areaCenterPosition[key].lng + key} value={key}>
-                  {key}
+              {Object.keys(areaConfig).map(key => (
+                <option key={areaConfig[key].position.lat + areaConfig[key].position.lng + key} value={key}>
+                  {areaConfig[key].name}
                 </option>
               ))}
             </NativeSelect>
@@ -347,7 +344,7 @@ function Map() {
               component="span"
               onClick={() => {
                 // console.log('pan to center of TW')
-                panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevel.wholeTaiwan)
+                panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
               }}
               alt="Go To TaiChing"
             >
