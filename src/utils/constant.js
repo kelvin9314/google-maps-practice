@@ -11,6 +11,11 @@ export const areaConfig = Object.freeze({
   kcg: { position: { lat: 22.629849, lng: 120.343714 }, areaCode: '12', name: '高雄市' },
 })
 
-// export const defaultZoom = 20
+export const zoomLevelConfig = Object.freeze({
+  wholeTaiwan: 8,
+  markerShow: 12,
+  cityChange: 14,
+  placeSearch: 16,
+})
 
-export const CENTER_OF_TAIWAN = { lat: 23.88467, lng: 120.990465 }
+export const CENTER_OF_TAIWAN = Object.freeze({ lat: 23.88467, lng: 120.990465 })

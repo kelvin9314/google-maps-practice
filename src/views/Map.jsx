@@ -11,7 +11,7 @@ import {
 import useStation from '../hooks/useStations'
 import { useImmer } from 'use-immer'
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
-import { areaConfig, defaultZoom, CENTER_OF_TAIWAN } from '../utils/constant'
+import { areaConfig, zoomLevelConfig, CENTER_OF_TAIWAN } from '../utils/constant'
 import { searchStationByName } from '../utils/station-helpers'
 
 import MaterialAutocomplete from '@material-ui/lab/Autocomplete'
@@ -25,12 +25,6 @@ import {
   NativeSelect,
 } from '@material-ui/core'
 import LocationCity from '@material-ui/icons/LocationCity'
-
-const zoomLevelConfig = Object.freeze({
-  wholeTaiwan: 7,
-  placeSearch: 16,
-  cityChange: 14,
-})
 
 const clustererOptions = {
   // averageCenter: true,
@@ -96,7 +90,7 @@ function Map() {
   const [map, setMap] = React.useState(null)
   const [autoComplete, setAutoComplete] = React.useState(null)
   const [searchBox, setSearchBox] = React.useState(null)
-  const [isMarkerShow, setIsMarkerShow] = React.useState(false)
+  const [isMarkerVisible, setIsMarkerVisible] = React.useState(false)
   const [displayInfo, setDisplayInfo] = useImmer({
     centerOfMap: CENTER_OF_TAIWAN,
   })
@@ -117,6 +111,8 @@ function Map() {
   React.useEffect(() => {
     if (!map) return
 
+    console.log(map)
+
     // NOTE : for the center position display when Map is initialed
     if (selectedCity) {
       panToWithZoomLevel(areaConfig[selectedCity].position, zoomLevelConfig.cityChange)
@@ -126,14 +122,14 @@ function Map() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, selectedCity])
 
-  const zoomLevelChecker = () => {
+  const mapZoomLevelChecker = () => {
     if (!map) return
     console.log('zoom level: ', map.getZoom())
     // console.log(infoWindowRef)
-    if (map.getZoom() >= 12) {
-      setIsMarkerShow(true)
+    if (map.getZoom() >= zoomLevelConfig.markerShow) {
+      setIsMarkerVisible(true)
     } else {
-      setIsMarkerShow(false)
+      setIsMarkerVisible(false)
     }
   }
 
@@ -208,6 +204,47 @@ function Map() {
     }
   }
 
+  const handlerOverLayOffset = ({ offsetWidth, offsetHeight, area }) => {
+    // console.log(area)
+    const offsetSolution = {
+      goTop: {
+        x: 0,
+        y: -50,
+      },
+      goRight: {
+        x: 50,
+        y: 0,
+      },
+      goRightBottom: {
+        x: 50,
+        y: 50,
+      },
+      goBottom: {
+        x: 0,
+        y: 50,
+      },
+      goLeftBottom: {
+        x: -50,
+        y: 0,
+      },
+      goLeft: {
+        x: -50,
+        y: 0,
+      },
+    }
+
+    if (area.areaCode === areaConfig.taipei.areaCode) return offsetSolution.goTop
+    if (area.areaCode === areaConfig.tycg.areaCode) return offsetSolution.goTop
+
+    if (area.areaCode === areaConfig.hccg.areaCode) return offsetSolution.goLeft
+
+    if (area.areaCode === areaConfig.miaoli.areaCode) return offsetSolution.goLeftBottom
+    if (area.areaCode === areaConfig.taichung.areaCode) return offsetSolution.goLeft
+    if (area.areaCode === areaConfig.chiayi.areaCode) return offsetSolution.goLeft
+
+    if (area.areaCode === areaConfig.kcg.areaCode) return offsetSolution.goTop
+  }
+
   if (loadError) {
     return <div>Map cannot be loaded right now, sorry.</div>
   }
@@ -272,10 +309,13 @@ function Map() {
             mapContainerClassName="google"
             center={displayInfo.centerOfMap}
             zoom={zoomLevelConfig.wholeTaiwan}
-            onZoomChanged={() => zoomLevelChecker()}
             options={mapOptions}
             onLoad={onLoadMap}
             onUnmount={onUnmountMap}
+            onZoomChanged={mapZoomLevelChecker}
+            onMouseMove={() => {
+              document.getElementsByClassName('google')[0].focus()
+            }}
             // onDragEnd={() => console.log('onDragEnd')}
             // onCenterChanged={() => console.log('onCenterChanged')}
           >
@@ -304,7 +344,7 @@ function Map() {
                           clusterer={clusterer}
                           animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
                           onClick={() => toggleInfoWindow(station)}
-                          visible={isMarkerShow}
+                          visible={isMarkerVisible}
                           // onMouseOver={() => toggleInfoWindow(station)}
                           // onMouseUp={() => console.log('onMouseUp')}
                           // onMouseOut={() => console.log('onMouseOut')}
@@ -315,6 +355,30 @@ function Map() {
                 }
               </MarkerClusterer>
             )}
+            {!isMarkerVisible &&
+              Object.keys(areaConfig).map(keyName => {
+                const area = areaConfig[keyName]
+
+                return (
+                  <OverlayView
+                    key={area.areaCode + area.position.lat}
+                    position={area.position}
+                    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                    // mapPaneName={OverlayView.FLOAT_PANE}
+                    // mapPaneName={OverlayView.MARKER_LAYER}
+                    getPixelPositionOffset={(offsetWidth, offsetHeight) =>
+                      handlerOverLayOffset({ offsetWidth, offsetHeight, area: area })
+                    }
+                  >
+                    <div className="map_point" onClick={() => setSelectedCity(keyName)}>
+                      <div>
+                        {area.name} <br />
+                        1234 站
+                      </div>
+                    </div>
+                  </OverlayView>
+                )
+              })}
           </GoogleMap>
         </div>
         <div style={{ margin: '10px 0' }}>
@@ -342,10 +406,7 @@ function Map() {
               color="primary"
               aria-label="upload picture"
               component="span"
-              onClick={() => {
-                // console.log('pan to center of TW')
-                panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
-              }}
+              onClick={() => setSelectedCity('')}
               alt="Go To TaiChing"
             >
               <LocationCity />
