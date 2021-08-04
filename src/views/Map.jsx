@@ -38,11 +38,13 @@ const clustererOptions = {
 
 const mapOptions = {
   streetViewControl: false,
+  // heading: 5,
+  // tilt: 0,
   minZoom: zoomLevelConfig.wholeTaiwan,
 }
 
 function createKey(station) {
-  return station.lat + station.lng + station.station_id
+  return station.lat + station.lng + station.station_no
 }
 
 const libraries = ['places']
@@ -111,11 +113,9 @@ function Map() {
   React.useEffect(() => {
     if (!map) return
 
-    console.log(map)
-
     // NOTE : for the center position display when Map is initialed
     if (selectedCity) {
-      panToWithZoomLevel(areaConfig[selectedCity].position, zoomLevelConfig.cityChange)
+      panToWithZoomLevel(areaConfig[selectedCity].position, zoomLevelConfig.wholeTaiwan)
     } else {
       panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
     }
@@ -310,6 +310,7 @@ function Map() {
             center={displayInfo.centerOfMap}
             zoom={zoomLevelConfig.wholeTaiwan}
             options={mapOptions}
+            tilt={0}
             onLoad={onLoadMap}
             onUnmount={onUnmountMap}
             onZoomChanged={mapZoomLevelChecker}
@@ -356,7 +357,7 @@ function Map() {
               </MarkerClusterer>
             )}
             {!isMarkerVisible &&
-              Object.keys(areaConfig).map(keyName => {
+              Object.keys(areaConfig).map((keyName, idx) => {
                 const area = areaConfig[keyName]
 
                 return (
@@ -393,11 +394,13 @@ function Map() {
               }}
             >
               <option aria-label="None" value="" />
-              {Object.keys(areaConfig).map(key => (
-                <option key={areaConfig[key].position.lat + areaConfig[key].position.lng + key} value={key}>
-                  {areaConfig[key].name}
-                </option>
-              ))}
+              {Object.keys(areaConfig).map((key, idx) => {
+                return (
+                  <option key={areaConfig[key].position.lat + areaConfig[key].position.lng} value={key}>
+                    {areaConfig[key].name}
+                  </option>
+                )
+              })}
             </NativeSelect>
             <FormHelperText>未選預設為全台</FormHelperText>
           </FormControl>
@@ -406,8 +409,11 @@ function Map() {
               color="primary"
               aria-label="upload picture"
               component="span"
-              onClick={() => setSelectedCity('')}
-              alt="Go To TaiChing"
+              onClick={() => {
+                if (selectedCity) setSelectedCity('')
+                panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
+              }}
+              alt="Go To TaiWan"
             >
               <LocationCity />
             </IconButton>
