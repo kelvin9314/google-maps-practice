@@ -1,4 +1,6 @@
 import React from 'react'
+import * as R from 'ramda'
+import { useParams, useHistory, useLocation } from 'react-router-dom'
 import {
   GoogleMap,
   useJsApiLoader,
@@ -8,7 +10,7 @@ import {
   Autocomplete,
   OverlayView,
 } from '@react-google-maps/api'
-import useStation from '../hooks/useStations'
+import useStations from '../hooks/use-stations'
 import { useImmer } from 'use-immer'
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
 import { areaConfig, zoomLevelConfig, CENTER_OF_TAIWAN } from '../utils/constant'
@@ -24,6 +26,11 @@ import {
   InputLabel,
   NativeSelect,
 } from '@material-ui/core'
+import FormLabel from '@material-ui/core/FormLabel'
+import Radio from '@material-ui/core/Radio'
+import RadioGroup from '@material-ui/core/RadioGroup'
+import FormControlLabel from '@material-ui/core/FormControlLabel'
+
 import LocationCity from '@material-ui/icons/LocationCity'
 
 const clustererOptions = {
@@ -75,10 +82,31 @@ const useStyles = makeStyles(theme => ({
 function Map() {
   const classes = useStyles()
   const infoWindowRef = React.useRef(null)
-  const { data: stations, isError, isLoading } = useStation()
+  const history = useHistory()
+  const location = useLocation()
+
+  const { data: rawStations, isError, isLoading } = useStations()
 
   const [selectedStation, setSelectedStation] = React.useState({})
   const [selectedCity, setSelectedCity] = React.useState('') // NOTE : key name of area only
+
+  // const [selectedBikeType, setSelectedBikeType] = React.useState('1') // '1' or '2'
+  const [selectedBikeType, setSelectedBikeType] = React.useState(() => {
+    const params = new URLSearchParams(location.search)
+    const val = params.get('bikeType')
+    return ['1', '2'].includes(val) ? val : '1'
+  }) // '1' or '2'
+  // const selectedBikeType = React.useMemo(() => {
+  //   const params = new URLSearchParams(location.search)
+  //   const val = params.get('bikeType')
+  //   return ['1', '2'].includes(val) ? val : '1'
+  // }, [location.search]) //
+
+  const stations = React.useMemo(() => {
+    console.log('station update')
+    if (selectedBikeType === '1') return rawStations.yb1 ? R.clone(rawStations.yb1) : []
+    if (selectedBikeType === '2') return rawStations.yb2 ? R.clone(rawStations.yb2) : []
+  }, [rawStations, selectedBikeType])
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -110,6 +138,11 @@ function Map() {
     // console.log('marker: ', marker)
   }
 
+  // React.useEffect(() => {
+  //   // console.log(rawStations)
+  //   console.log(stations)
+  // }, [stations])
+
   React.useEffect(() => {
     if (!map) return
 
@@ -120,13 +153,13 @@ function Map() {
       panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, selectedCity])
+  }, [map, selectedCity, selectedBikeType])
 
   const mapZoomLevelChecker = () => {
     if (!map) return
     console.log('zoom level: ', map.getZoom())
     // console.log(infoWindowRef)
-    if (map.getZoom() >= zoomLevelConfig.markerShow) {
+    if (map.getZoom() >= zoomLevelConfig.wholeTaiwan) {
       setIsMarkerVisible(true)
     } else {
       setIsMarkerVisible(false)
@@ -255,7 +288,7 @@ function Map() {
       <div className="page-container">
         <div className="control_container">
           <div className="control_column">
-            <Autocomplete
+            {/* <Autocomplete
               className="autocomplete-list"
               onLoad={autocomplete => setAutoComplete(autocomplete)}
               onPlaceChanged={onPlaceChanged}
@@ -275,7 +308,26 @@ function Map() {
                 label="Google地標 Standalone"
                 variant="outlined"
               />
-            </StandaloneSearchBox>
+            </StandaloneSearchBox> */}
+            <FormControl component="fieldset">
+              <FormLabel component="legend">Bike Type</FormLabel>
+              <RadioGroup
+                aria-label="Bike Type"
+                name="Bike Type"
+                value={selectedBikeType}
+                onChange={e => {
+                  const targetBikeType = e.target.value
+                  history.replace({
+                    pathname: location.pathname,
+                    search: '?' + new URLSearchParams({ bikeType: e.target.value }).toString(),
+                  })
+                  history.go(0)
+                }}
+              >
+                <FormControlLabel value="1" control={<Radio />} label="YouBike 1.0" />
+                <FormControlLabel value="2" control={<Radio />} label="YouBike 2.0" />
+              </RadioGroup>
+            </FormControl>
           </div>
           <div className="control_column">
             <MaterialAutocomplete
@@ -356,7 +408,7 @@ function Map() {
                 }
               </MarkerClusterer>
             )}
-            {!isMarkerVisible &&
+            {/* {!isMarkerVisible &&
               Object.keys(areaConfig).map((keyName, idx) => {
                 const area = areaConfig[keyName]
 
@@ -379,7 +431,7 @@ function Map() {
                     </div>
                   </OverlayView>
                 )
-              })}
+              })} */}
           </GoogleMap>
         </div>
         <div style={{ margin: '10px 0' }}>
