@@ -50,6 +50,7 @@ const mapOptions = {
   // heading: 5,
   // tilt: 0,
   minZoom: zoomLevelConfig.wholeTaiwan,
+  scrollwheel: true,
 }
 
 function createKey(station) {
@@ -103,7 +104,7 @@ function Map() {
     return '1'
   }, [location.search])
 
-  const stations = React.useMemo(() => {
+  const { stationAll, stationByBikeType } = React.useMemo(() => {
     const yb1 = rawStations.yb1 ? R.clone(rawStations.yb1) : []
     const yb2 = rawStations.yb2 ? R.clone(rawStations.yb2) : []
 
@@ -113,10 +114,11 @@ function Map() {
         markerIcon: getStationMarkerIcon(s),
       }
     }
-    const result = R.map(processingData, R.concat(yb1, yb2))
+    const stationAll = R.map(processingData, R.concat(yb1, yb2))
+    const stationByBikeType = R.map(processingData, selectedBikeType === '1' ? yb1 : yb2)
 
-    return result
-  }, [rawStations])
+    return { stationAll, stationByBikeType }
+  }, [rawStations, selectedBikeType])
 
   const currentAreaByBikeTypeArr = React.useMemo(() => {
     if (!responseOfAreaInfo || !responseOfStationCount) return []
@@ -367,14 +369,15 @@ function Map() {
           <div className="control_column">
             <MaterialAutocomplete
               id="combo-box-demo"
-              options={stations || []}
+              options={stationByBikeType || []}
               getOptionLabel={option => option.name_tw}
               style={{ width: 300 }}
+              // autoHighlight={true}
+              // clearOnBlur={true}
+              // clearOnEscape={true}
               blurOnSelect={true} // 'mouse'| 'touch'| bool
               // onInputChange={(e, value) => {
-              //   console.log(stations)
               //   console.log(value)
-              //   // stationSearchHandler(stations, value)
               // }}
               // onHighlightChange={(e, option, reason) => {
               //   console.log(option)
@@ -384,7 +387,12 @@ function Map() {
                 stationSelectHandler(value)
               }}
               renderInput={params => (
-                <MaterialTextField {...params} label="YouBike 站點" placeholder="請輸入站點名稱" variant="outlined" />
+                <MaterialTextField
+                  {...params}
+                  label="YouBike 站點(Autocomplete)"
+                  placeholder="請輸入站點名稱"
+                  variant="outlined"
+                />
               )}
             />
           </div>
@@ -400,9 +408,7 @@ function Map() {
             onLoad={onLoadMap}
             onUnmount={onUnmountMap}
             onZoomChanged={mapZoomLevelChecker}
-            onMouseMove={() => {
-              document.getElementsByClassName('google')[0].focus()
-            }}
+            // onMouseMove={() => console.log('onMouseMove map')}
             // onDragEnd={() => console.log('onDragEnd')}
             // onCenterChanged={() => console.log('onCenterChanged')}
           >
@@ -410,10 +416,10 @@ function Map() {
 
             <MapInfoWIndow stationObj={selectedStation} ref={infoWindowRef} />
 
-            {stations?.length > 0 && (
+            {stationAll?.length > 0 && (
               <MarkerClusterer options={clustererOptions}>
                 {clusterer =>
-                  stations.map(station => {
+                  stationAll.map(station => {
                     const position = {
                       lat: Number(station.lat),
                       lng: Number(station.lng),
