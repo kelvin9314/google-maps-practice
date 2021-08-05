@@ -1,8 +1,9 @@
-.container {
+
+.control_container {
   display: flex;
 }
 
-.container__column {
+.control_column {
   flex: 1;
   /* Space between columns */
   margin: 0 8px;
@@ -12,7 +13,7 @@
   flex-direction: column;
 }
 
-.container__content {
+.control_content {
   /* Take available height */
   flex: 1;
 }

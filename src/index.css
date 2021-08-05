@@ -1,13 +1,55 @@
-body {
+/* body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+} */
+
+body, select, input, button, textarea {
+  font-family: "Noto Sans TC", "Microsoft JhengHei","Arial","Helvetica","STHeiti";
+  font-weight: 600;
+  color: #333;
+}
+body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, input, textarea, p, blockquote, th, td {
+  margin: 0;
+  padding: 0;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+.page-container{
+  position: relative;
+  padding: 15px;
+  min-height: 900px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.station-map-container{position: relative;width: 95%;margin:20px auto 0;}
+.station-map-container .google{position: relative;width: 100%;overflow: hidden; height: 52vw;box-shadow:.3vw .4vw 0.3vw #f1f1f1;border-radius: .5rem; max-height: 650px}
+.station-map-container .google iframe{height: 100%; width: 100%}
+.station-map-container .google img{max-height: 100%;max-width: 100%;width: 100%;}
+
+.station-item-container{
+  position: relative;
+  width: 95%;
+  display: flex;
+  flex-direction: row;
+  padding: 3vw 0 .5vw;
+  justify-content: flex-start;
+  margin: 0 auto;
+}
+
+.map_point {
+  padding: .4em .2em .6em;
+  border: .35em #fdf8a6 solid;
+  background: #ffef00;
+  position: absolute;
+  border-radius: 100%;
+  width: 5.4em;
+  height: 5.2em;
+  text-align: center;
+  font-size: .8em;
+  font-weight: 600;
+  cursor: pointer;
 }
