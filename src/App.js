@@ -8,9 +8,6 @@ function App() {
       <Route path="/map">
         <Map />
       </Route>
-      {/* <Route path="/map/:bikeType">
-        <Map />
-      </Route> */}
 
       <Route path="*">
         <Redirect to="/map" />

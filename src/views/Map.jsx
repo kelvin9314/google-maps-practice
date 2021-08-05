@@ -14,7 +14,7 @@ import useStations from '../hooks/use-stations'
 import { useImmer } from 'use-immer'
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
 import { areaConfig, zoomLevelConfig, CENTER_OF_TAIWAN } from '../utils/constant'
-import { searchStationByName } from '../utils/station-helpers'
+import { searchStationByName, setStationMarkerIcon } from '../utils/station-helpers'
 
 import MaterialAutocomplete from '@material-ui/lab/Autocomplete'
 import { makeStyles } from '@material-ui/core/styles'
@@ -90,23 +90,22 @@ function Map() {
   const [selectedStation, setSelectedStation] = React.useState({})
   const [selectedCity, setSelectedCity] = React.useState('') // NOTE : key name of area only
 
-  // const [selectedBikeType, setSelectedBikeType] = React.useState('1') // '1' or '2'
-  const [selectedBikeType, setSelectedBikeType] = React.useState(() => {
+  const selectedBikeType = React.useMemo(() => {
     const params = new URLSearchParams(location.search)
-    const val = params.get('bikeType')
-    return ['1', '2'].includes(val) ? val : '1'
-  }) // '1' or '2'
-  // const selectedBikeType = React.useMemo(() => {
-  //   const params = new URLSearchParams(location.search)
-  //   const val = params.get('bikeType')
-  //   return ['1', '2'].includes(val) ? val : '1'
-  // }, [location.search]) //
+    const val = params.get('bike_type')
+
+    // NOTE : 預設是 1.0
+    if (['1', '2'].includes(val)) return val || '1'
+  }, [location.search]) //
 
   const stations = React.useMemo(() => {
     console.log('station update')
-    if (selectedBikeType === '1') return rawStations.yb1 ? R.clone(rawStations.yb1) : []
-    if (selectedBikeType === '2') return rawStations.yb2 ? R.clone(rawStations.yb2) : []
-  }, [rawStations, selectedBikeType])
+    const yb1 = rawStations.yb1 ? R.clone(rawStations.yb1) : []
+    const yb2 = rawStations.yb2 ? R.clone(rawStations.yb2) : []
+
+    const processedData = R.forEach(setStationMarkerIcon, R.concat(yb1, yb2))
+    return processedData
+  }, [rawStations])
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -138,17 +137,12 @@ function Map() {
     // console.log('marker: ', marker)
   }
 
-  // React.useEffect(() => {
-  //   // console.log(rawStations)
-  //   console.log(stations)
-  // }, [stations])
-
   React.useEffect(() => {
     if (!map) return
 
     // NOTE : for the center position display when Map is initialed
     if (selectedCity) {
-      panToWithZoomLevel(areaConfig[selectedCity].position, zoomLevelConfig.wholeTaiwan)
+      panToWithZoomLevel(areaConfig[selectedCity].position, zoomLevelConfig.cityChange)
     } else {
       panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
     }
@@ -278,6 +272,13 @@ function Map() {
     if (area.areaCode === areaConfig.kcg.areaCode) return offsetSolution.goTop
   }
 
+  const setQueryParamsInSamePage = obj => {
+    history.push({
+      pathname: location.pathname,
+      search: '?' + new URLSearchParams(obj).toString(),
+    })
+  }
+
   if (loadError) {
     return <div>Map cannot be loaded right now, sorry.</div>
   }
@@ -316,12 +317,7 @@ function Map() {
                 name="Bike Type"
                 value={selectedBikeType}
                 onChange={e => {
-                  const targetBikeType = e.target.value
-                  history.replace({
-                    pathname: location.pathname,
-                    search: '?' + new URLSearchParams({ bikeType: e.target.value }).toString(),
-                  })
-                  history.go(0)
+                  setQueryParamsInSamePage({ bike_type: e.target.value })
                 }}
               >
                 <FormControlLabel value="1" control={<Radio />} label="YouBike 1.0" />
@@ -346,7 +342,6 @@ function Map() {
               // }}
               onChange={(e, value, reason) => {
                 if (!value) return
-                // console.log(value)
                 stationSelectHandler(value)
               }}
               renderInput={params => (
@@ -376,35 +371,33 @@ function Map() {
 
             <MapInfoWIndow stationObj={selectedStation} ref={infoWindowRef} />
 
-            {stations?.length > 1 && (
+            {stations?.length > 0 && (
               <MarkerClusterer options={clustererOptions}>
                 {clusterer =>
-                  stations
-                    // .filter(a => a.area_code === '00')
-                    .map(station => {
-                      const position = {
-                        lat: Number(station.lat),
-                        lng: Number(station.lng),
-                      }
-                      return (
-                        <Marker
-                          key={createKey(station)}
-                          // cursor={station.name_tw}
-                          title={station.name_tw}
-                          onLoad={onLoadMarker}
-                          icon={'https://img.icons8.com/doodle/30/000000/marker--v1.png'}
-                          position={position}
-                          clusterer={clusterer}
-                          animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
-                          onClick={() => toggleInfoWindow(station)}
-                          visible={isMarkerVisible}
-                          // onMouseOver={() => toggleInfoWindow(station)}
-                          // onMouseUp={() => console.log('onMouseUp')}
-                          // onMouseOut={() => console.log('onMouseOut')}
-                          onRightClick={() => console.log('onRightClick')}
-                        />
-                      )
-                    })
+                  stations.map(station => {
+                    const position = {
+                      lat: Number(station.lat),
+                      lng: Number(station.lng),
+                    }
+                    return (
+                      <Marker
+                        key={createKey(station)}
+                        cursor={station.name_tw}
+                        title={station.name_tw}
+                        onLoad={onLoadMarker}
+                        icon={station.markerIcon}
+                        position={position}
+                        clusterer={clusterer}
+                        animation={window.google.maps.Animation.DROP} //  BOUNCE, DROP.
+                        onClick={() => toggleInfoWindow(station)}
+                        visible={isMarkerVisible && station.type.toString() === selectedBikeType}
+                        // onMouseOver={() => toggleInfoWindow(station)}
+                        // onMouseUp={() => console.log('onMouseUp')}
+                        // onMouseOut={() => console.log('onMouseOut')}
+                        onRightClick={() => console.log('onRightClick')}
+                      />
+                    )
+                  })
                 }
               </MarkerClusterer>
             )}
