@@ -11,10 +11,11 @@ import {
   OverlayView,
 } from '@react-google-maps/api'
 import useStations from '../hooks/use-stations'
+import fetcher from '../utils/api-client'
 import { useImmer } from 'use-immer'
 import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
 import { areaConfig, zoomLevelConfig, CENTER_OF_TAIWAN } from '../utils/constant'
-import { searchStationByName, setStationMarkerIcon } from '../utils/station-helpers'
+import { searchStationByName, getStationMarkerIcon } from '../utils/station-helpers'
 
 import MaterialAutocomplete from '@material-ui/lab/Autocomplete'
 import { makeStyles } from '@material-ui/core/styles'
@@ -32,6 +33,7 @@ import RadioGroup from '@material-ui/core/RadioGroup'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
 
 import LocationCity from '@material-ui/icons/LocationCity'
+import useSWR from 'swr'
 
 const clustererOptions = {
   // averageCenter: true,
@@ -86,6 +88,8 @@ function Map() {
   const location = useLocation()
 
   const { data: rawStations, isError, isLoading } = useStations()
+  const { data: responseOfAreaInfo } = useSWR('api/front/area/all', fetcher, { revalidateOnFocus: false })
+  const { data: responseOfStationCount } = useSWR('api/front/station/count', fetcher, { revalidateOnFocus: false })
 
   const [selectedStation, setSelectedStation] = React.useState({})
   const [selectedCity, setSelectedCity] = React.useState('') // NOTE : key name of area only
@@ -93,19 +97,60 @@ function Map() {
   const selectedBikeType = React.useMemo(() => {
     const params = new URLSearchParams(location.search)
     const val = params.get('bike_type')
+    if (['1', '2'].includes(val)) return val
 
     // NOTE : 預設是 1.0
-    if (['1', '2'].includes(val)) return val || '1'
-  }, [location.search]) //
+    return '1'
+  }, [location.search])
 
   const stations = React.useMemo(() => {
-    console.log('station update')
     const yb1 = rawStations.yb1 ? R.clone(rawStations.yb1) : []
     const yb2 = rawStations.yb2 ? R.clone(rawStations.yb2) : []
 
-    const processedData = R.forEach(setStationMarkerIcon, R.concat(yb1, yb2))
-    return processedData
+    const processingData = s => {
+      return {
+        ...s,
+        markerIcon: getStationMarkerIcon(s),
+      }
+    }
+    const result = R.map(processingData, R.concat(yb1, yb2))
+
+    return result
   }, [rawStations])
+
+  const currentAreaByBikeTypeArr = React.useMemo(() => {
+    if (!responseOfAreaInfo || !responseOfStationCount) return []
+
+    const { retVal: infos, retMsg: infoMsg } = responseOfAreaInfo
+    const { retVal: counts, retMsg: countMsg } = responseOfStationCount
+    if (!infos || infos?.length === 0) {
+      console.error(infos)
+      return []
+    }
+    if (!counts || counts?.length === 0) {
+      console.error(countMsg)
+      return []
+    }
+
+    const isCurrentBikeType = a => a.bike_type.includes(selectedBikeType)
+
+    const processingData = a => {
+      const areaCount = counts.find(c => c.area_code === a.area_code)
+      return {
+        areaCode: a.area_code,
+        name: a.area_name_tw,
+        position: {
+          lat: selectedBikeType === '1' ? Number(a.lat) : Number(a.lat2),
+          lng: selectedBikeType === '1' ? Number(a.lng) : Number(a.lng2),
+        },
+        keyNameF2E: Object.keys(areaConfig).find(key => (areaConfig[key].areaCode === a.area_code ? key : '')),
+        stationAmount: !areaCount ? 0 : selectedBikeType === '1' ? areaCount.yb1 : areaCount.yb2,
+      }
+    }
+    const filteredAreas = R.map(processingData, R.filter(isCurrentBikeType, infos))
+
+    return filteredAreas
+  }, [responseOfAreaInfo, selectedBikeType, responseOfStationCount])
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -147,13 +192,13 @@ function Map() {
       panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, selectedCity, selectedBikeType])
+  }, [map, selectedCity])
 
   const mapZoomLevelChecker = () => {
     if (!map) return
     console.log('zoom level: ', map.getZoom())
     // console.log(infoWindowRef)
-    if (map.getZoom() >= zoomLevelConfig.wholeTaiwan) {
+    if (map.getZoom() >= zoomLevelConfig.markerShow) {
       setIsMarkerVisible(true)
     } else {
       setIsMarkerVisible(false)
@@ -187,13 +232,7 @@ function Map() {
 
   function selectCityChangeHandler(e) {
     const areaKey = e.target.value
-    // const targetCityObj = { ...areaConfig[areaKey].position }
     setSelectedCity(areaKey)
-    // panToWithZoomLevel(targetCityObj, zoomLevelConfig.cityChange)
-    // setDisplayInfo(draft => {
-    //   draft.centerOfMap = targetCityObj
-    // })
-    // map.setZoom(zoomLevelConfig.cityChange)
   }
 
   function stationSearchHandler(stations = [], queryString = '') {
@@ -394,17 +433,22 @@ function Map() {
                         // onMouseOver={() => toggleInfoWindow(station)}
                         // onMouseUp={() => console.log('onMouseUp')}
                         // onMouseOut={() => console.log('onMouseOut')}
-                        onRightClick={() => console.log('onRightClick')}
+                        onRightClick={() => {
+                          const param = new URLSearchParams({
+                            api: 1,
+                            query: `${station.lat},${station.lng}`,
+                          }).toString()
+                          const url = `https://www.google.com/maps/search/?${param}`
+                          window.open(url, '_YouBike_station')
+                        }}
                       />
                     )
                   })
                 }
               </MarkerClusterer>
             )}
-            {/* {!isMarkerVisible &&
-              Object.keys(areaConfig).map((keyName, idx) => {
-                const area = areaConfig[keyName]
-
+            {!isMarkerVisible &&
+              currentAreaByBikeTypeArr.map(area => {
                 return (
                   <OverlayView
                     key={area.areaCode + area.position.lat}
@@ -412,19 +456,19 @@ function Map() {
                     mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                     // mapPaneName={OverlayView.FLOAT_PANE}
                     // mapPaneName={OverlayView.MARKER_LAYER}
-                    getPixelPositionOffset={(offsetWidth, offsetHeight) =>
-                      handlerOverLayOffset({ offsetWidth, offsetHeight, area: area })
-                    }
+                    // getPixelPositionOffset={(offsetWidth, offsetHeight) =>
+                    //   handlerOverLayOffset({ offsetWidth, offsetHeight, area: area })
+                    // }
                   >
-                    <div className="map_point" onClick={() => setSelectedCity(keyName)}>
+                    <div className="map_point" onClick={() => setSelectedCity(area.keyNameF2E)}>
                       <div>
                         {area.name} <br />
-                        1234 站
+                        {area.stationAmount} 站
                       </div>
                     </div>
                   </OverlayView>
                 )
-              })} */}
+              })}
           </GoogleMap>
         </div>
         <div style={{ margin: '10px 0' }}>
