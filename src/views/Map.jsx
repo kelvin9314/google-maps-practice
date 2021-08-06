@@ -170,6 +170,7 @@ function Map() {
   const [isMarkerVisible, setIsMarkerVisible] = React.useState(false)
   const [displayInfo, setDisplayInfo] = useImmer({
     centerOfMap: CENTER_OF_TAIWAN,
+    markers: [],
   })
   const onLoadMap = React.useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds()
@@ -196,12 +197,23 @@ function Map() {
   const mapZoomLevelChecker = () => {
     if (!map) return
     console.log('zoom level: ', map.getZoom())
+
     // console.log(infoWindowRef)
     if (map.getZoom() >= zoomLevelConfig.markerShow) {
       setIsMarkerVisible(true)
     } else {
       setIsMarkerVisible(false)
     }
+
+    // const tempMarker = displayInfo.markers[0]
+    // if (!tempMarker) return
+    // console.log(tempMarker)
+    // const markerPosition = { lat: tempMarker.position.lat(), lng: tempMarker.position.lng() }
+    // console.log(markerPosition)
+    // const countConditions = m =>
+    //   isMarkerVisible && map.getBounds().contains({ lat: m.position.lat(), lng: m.position.lng() })
+    // const amountOfVisibleMarker = R.filter(countConditions, displayInfo.markers).length
+    // console.log('amountOfVisibleMarker: ' + amountOfVisibleMarker)
   }
 
   const toggleInfoWindow = station => {
@@ -317,6 +329,16 @@ function Map() {
     })
   }
 
+  const openNewTabGoogleMap = stationObj => {
+    console.log('openNewTabGoogleMap')
+    const param = new URLSearchParams({
+      api: 1,
+      query: `${stationObj.lat},${stationObj.lng}`,
+    }).toString()
+    const url = `https://www.google.com/maps/search/?${param}`
+    window.open(url, '_YouBike_station')
+  }
+
   if (loadError) {
     return <div>Map cannot be loaded right now, sorry.</div>
   }
@@ -427,11 +449,9 @@ function Map() {
                         // cursor={""}
                         title={station.name_tw}
                         onLoad={marker => {
-                          // console.log(station)
-                          // if (isMarkerVisible && station.type.toString() === selectedBikeType) {
-                          //   console.log(123)
-                          //   marker.setVisible(false)
-                          // }
+                          // setDisplayInfo(draft => {
+                          //   draft.markers.push(marker)
+                          // })
                         }}
                         icon={station.markerIcon}
                         position={position}
@@ -442,14 +462,11 @@ function Map() {
                         // onMouseOver={() => toggleInfoWindow(station)}
                         // onMouseUp={() => console.log('onMouseUp')}
                         // onMouseOut={() => console.log('onMouseOut')}
-                        onRightClick={() => {
-                          const param = new URLSearchParams({
-                            api: 1,
-                            query: `${station.lat},${station.lng}`,
-                          }).toString()
-                          const url = `https://www.google.com/maps/search/?${param}`
-                          window.open(url, '_YouBike_station')
-                        }}
+                        // onShapeChanged={() => console.log('onShapeChanged')}
+                        // onTitleChanged={() => console.log('onTitleChanged')}
+                        // onVisibleChanged={() => console.log('onVisibleChanged')}
+                        onDblClick={() => openNewTabGoogleMap(station)}
+                        onRightClick={() => openNewTabGoogleMap(station)}
                       />
                     )
                   })
