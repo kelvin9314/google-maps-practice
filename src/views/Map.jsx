@@ -33,12 +33,13 @@ import RadioGroup from '@material-ui/core/RadioGroup'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
 
 import LocationCity from '@material-ui/icons/LocationCity'
+import GpsFixedOutlinedIcon from '@material-ui/icons/GpsFixedOutlined'
 import useSWR from 'swr'
 
-const clustererOptions = {
-  // averageCenter: true,
+const clusterOptions = {
+  averageCenter: true,
   // gridSize: 30, // default value is 60.
-  maxZoom: 16,
+  maxZoom: zoomLevelConfig.cityChange - 1, // enable cluster with zoom level
   minimumClusterSize: 4,
   zoomOnClick: true,
   imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', // so you must have m1.png, m2.png, m3.png, m4.png, m5.png and m6.png in that folder
@@ -53,7 +54,7 @@ const mapOptions = {
   scrollwheel: true,
 }
 
-function createKey(station) {
+function createKeyForStation(station) {
   return station.lat + station.lng + station.station_no
 }
 
@@ -179,10 +180,6 @@ function Map() {
   const onUnmountMap = React.useCallback(function callback(map) {
     setMap(null)
   }, [])
-
-  const onLoadMarker = marker => {
-    // console.log('marker: ', marker)
-  }
 
   React.useEffect(() => {
     if (!map) return
@@ -417,7 +414,7 @@ function Map() {
             <MapInfoWIndow stationObj={selectedStation} ref={infoWindowRef} />
 
             {stationAll?.length > 0 && (
-              <MarkerClusterer options={clustererOptions}>
+              <MarkerClusterer options={clusterOptions}>
                 {clusterer =>
                   stationAll.map(station => {
                     const position = {
@@ -426,10 +423,16 @@ function Map() {
                     }
                     return (
                       <Marker
-                        key={createKey(station)}
-                        cursor={station.name_tw}
+                        key={createKeyForStation(station)}
+                        // cursor={""}
                         title={station.name_tw}
-                        onLoad={onLoadMarker}
+                        onLoad={marker => {
+                          // console.log(station)
+                          // if (isMarkerVisible && station.type.toString() === selectedBikeType) {
+                          //   console.log(123)
+                          //   marker.setVisible(false)
+                          // }
+                        }}
                         icon={station.markerIcon}
                         position={position}
                         clusterer={clusterer}
@@ -502,15 +505,44 @@ function Map() {
           <label htmlFor="icon-button-file">
             <IconButton
               color="primary"
-              aria-label="upload picture"
+              aria-label="Move to TaiWan"
               component="span"
               onClick={() => {
                 if (selectedCity) setSelectedCity('')
                 panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
               }}
-              alt="Go To TaiWan"
+              alt="Move To TaiWan"
             >
               <LocationCity />
+            </IconButton>
+            <IconButton
+              color="primary"
+              aria-label="upload picture"
+              component="span"
+              onClick={() => {
+                //  HTML5 geolocation.
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    position => {
+                      const pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                      }
+                      console.log(pos)
+                      // map.setCenter(pos)
+                      panToWithZoomLevel(pos, zoomLevelConfig.placeSearch)
+                    },
+                    () => {
+                      console.error('some error on getting current postion')
+                    }
+                  )
+                } else {
+                  console.warn("Browser doesn't support Geolocation")
+                }
+              }}
+              alt="Get GPS"
+            >
+              <GpsFixedOutlinedIcon />
             </IconButton>
           </label>
         </div>
