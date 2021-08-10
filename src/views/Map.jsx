@@ -13,7 +13,7 @@ import {
 import useStations from '../hooks/use-stations'
 import fetcher from '../utils/api-client'
 import { useImmer } from 'use-immer'
-import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
+import MapInfoWIndow from '../components/map-info-wIndow'
 import { areaConfig, zoomLevelConfig, CENTER_OF_TAIWAN } from '../utils/constant'
 import { searchStationByName, getStationMarkerIcon } from '../utils/station-helpers'
 
@@ -31,9 +31,9 @@ import FormLabel from '@material-ui/core/FormLabel'
 import Radio from '@material-ui/core/Radio'
 import RadioGroup from '@material-ui/core/RadioGroup'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
-
 import LocationCity from '@material-ui/icons/LocationCity'
 import GpsFixedOutlinedIcon from '@material-ui/icons/GpsFixedOutlined'
+import VirtualizedTable from '../components/virtualized-table'
 import useSWR from 'swr'
 
 const clusterOptions = {
@@ -61,16 +61,16 @@ function createKeyForStation(station) {
 const libraries = ['places']
 
 const inputStyle = {
-  boxSizing: `border-box`,
-  border: `1px solid transparent`,
-  width: `240px`,
-  height: `32px`,
-  padding: `0 12px`,
-  borderRadius: `3px`,
-  boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
-  fontSize: `14px`,
-  outline: `none`,
-  textOverflow: `ellipses`,
+  boxSizing: 'border-box',
+  border: '1px solid transparent',
+  width: '240px',
+  height: '32px',
+  padding: '0 12px',
+  borderRadius: '3px',
+  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+  fontSize: '14px',
+  outline: 'none',
+  textOverflow: 'ellipses',
 }
 
 const useStyles = makeStyles(theme => ({
@@ -562,6 +562,10 @@ function Map() {
               <GpsFixedOutlinedIcon />
             </IconButton>
           </label>
+        </div>
+
+        <div className="list-container">
+          <VirtualizedTable />
         </div>
       </div>
     </>
