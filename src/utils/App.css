@@ -1,0 +1,23 @@
+
+.control_container {
+  display: flex;
+}
+
+.control_column {
+  flex: 1;
+  /* Space between columns */
+  margin: 0 8px;
+
+  /* Layout each column */
+  display: flex;
+  flex-direction: column;
+}
+
+.control_content {
+  /* Take available height */
+  flex: 1;
+}
+
+/* .autocomplete-list{
+  color: red
+} */

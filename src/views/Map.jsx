@@ -13,7 +13,7 @@ import {
 import useStations from '../hooks/use-stations'
 import fetcher from '../utils/api-client'
 import { useImmer } from 'use-immer'
-import MapInfoWIndow from '../components/MapInfoWIndow.jsx'
+import MapInfoWIndow from '../components/map-info-wIndow'
 import { areaConfig, zoomLevelConfig, CENTER_OF_TAIWAN } from '../utils/constant'
 import { searchStationByName, getStationMarkerIcon } from '../utils/station-helpers'
 
@@ -31,14 +31,15 @@ import FormLabel from '@material-ui/core/FormLabel'
 import Radio from '@material-ui/core/Radio'
 import RadioGroup from '@material-ui/core/RadioGroup'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
-
 import LocationCity from '@material-ui/icons/LocationCity'
+import GpsFixedOutlinedIcon from '@material-ui/icons/GpsFixedOutlined'
+import VirtualizedTable from '../components/virtualized-table'
 import useSWR from 'swr'
 
-const clustererOptions = {
-  // averageCenter: true,
+const clusterOptions = {
+  averageCenter: true,
   // gridSize: 30, // default value is 60.
-  maxZoom: 16,
+  maxZoom: zoomLevelConfig.cityChange - 1, // enable cluster with zoom level
   minimumClusterSize: 4,
   zoomOnClick: true,
   imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', // so you must have m1.png, m2.png, m3.png, m4.png, m5.png and m6.png in that folder
@@ -53,23 +54,23 @@ const mapOptions = {
   scrollwheel: true,
 }
 
-function createKey(station) {
+function createKeyForStation(station) {
   return station.lat + station.lng + station.station_no
 }
 
 const libraries = ['places']
 
 const inputStyle = {
-  boxSizing: `border-box`,
-  border: `1px solid transparent`,
-  width: `240px`,
-  height: `32px`,
-  padding: `0 12px`,
-  borderRadius: `3px`,
-  boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
-  fontSize: `14px`,
-  outline: `none`,
-  textOverflow: `ellipses`,
+  boxSizing: 'border-box',
+  border: '1px solid transparent',
+  width: '240px',
+  height: '32px',
+  padding: '0 12px',
+  borderRadius: '3px',
+  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+  fontSize: '14px',
+  outline: 'none',
+  textOverflow: 'ellipses',
 }
 
 const useStyles = makeStyles(theme => ({
@@ -169,6 +170,7 @@ function Map() {
   const [isMarkerVisible, setIsMarkerVisible] = React.useState(false)
   const [displayInfo, setDisplayInfo] = useImmer({
     centerOfMap: CENTER_OF_TAIWAN,
+    markers: [],
   })
   const onLoadMap = React.useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds()
@@ -179,10 +181,6 @@ function Map() {
   const onUnmountMap = React.useCallback(function callback(map) {
     setMap(null)
   }, [])
-
-  const onLoadMarker = marker => {
-    // console.log('marker: ', marker)
-  }
 
   React.useEffect(() => {
     if (!map) return
@@ -199,12 +197,23 @@ function Map() {
   const mapZoomLevelChecker = () => {
     if (!map) return
     console.log('zoom level: ', map.getZoom())
+
     // console.log(infoWindowRef)
     if (map.getZoom() >= zoomLevelConfig.markerShow) {
       setIsMarkerVisible(true)
     } else {
       setIsMarkerVisible(false)
     }
+
+    // const tempMarker = displayInfo.markers[0]
+    // if (!tempMarker) return
+    // console.log(tempMarker)
+    // const markerPosition = { lat: tempMarker.position.lat(), lng: tempMarker.position.lng() }
+    // console.log(markerPosition)
+    // const countConditions = m =>
+    //   isMarkerVisible && map.getBounds().contains({ lat: m.position.lat(), lng: m.position.lng() })
+    // const amountOfVisibleMarker = R.filter(countConditions, displayInfo.markers).length
+    // console.log('amountOfVisibleMarker: ' + amountOfVisibleMarker)
   }
 
   const toggleInfoWindow = station => {
@@ -320,6 +329,16 @@ function Map() {
     })
   }
 
+  const openNewTabGoogleMap = stationObj => {
+    console.log('openNewTabGoogleMap')
+    const param = new URLSearchParams({
+      api: 1,
+      query: `${stationObj.lat},${stationObj.lng}`,
+    }).toString()
+    const url = `https://www.google.com/maps/search/?${param}`
+    window.open(url, '_YouBike_station')
+  }
+
   if (loadError) {
     return <div>Map cannot be loaded right now, sorry.</div>
   }
@@ -417,7 +436,7 @@ function Map() {
             <MapInfoWIndow stationObj={selectedStation} ref={infoWindowRef} />
 
             {stationAll?.length > 0 && (
-              <MarkerClusterer options={clustererOptions}>
+              <MarkerClusterer options={clusterOptions}>
                 {clusterer =>
                   stationAll.map(station => {
                     const position = {
@@ -426,10 +445,14 @@ function Map() {
                     }
                     return (
                       <Marker
-                        key={createKey(station)}
-                        cursor={station.name_tw}
+                        key={createKeyForStation(station)}
+                        // cursor={""}
                         title={station.name_tw}
-                        onLoad={onLoadMarker}
+                        onLoad={marker => {
+                          // setDisplayInfo(draft => {
+                          //   draft.markers.push(marker)
+                          // })
+                        }}
                         icon={station.markerIcon}
                         position={position}
                         clusterer={clusterer}
@@ -439,14 +462,11 @@ function Map() {
                         // onMouseOver={() => toggleInfoWindow(station)}
                         // onMouseUp={() => console.log('onMouseUp')}
                         // onMouseOut={() => console.log('onMouseOut')}
-                        onRightClick={() => {
-                          const param = new URLSearchParams({
-                            api: 1,
-                            query: `${station.lat},${station.lng}`,
-                          }).toString()
-                          const url = `https://www.google.com/maps/search/?${param}`
-                          window.open(url, '_YouBike_station')
-                        }}
+                        // onShapeChanged={() => console.log('onShapeChanged')}
+                        // onTitleChanged={() => console.log('onTitleChanged')}
+                        // onVisibleChanged={() => console.log('onVisibleChanged')}
+                        onDblClick={() => openNewTabGoogleMap(station)}
+                        onRightClick={() => openNewTabGoogleMap(station)}
                       />
                     )
                   })
@@ -502,17 +522,50 @@ function Map() {
           <label htmlFor="icon-button-file">
             <IconButton
               color="primary"
-              aria-label="upload picture"
+              aria-label="Move to TaiWan"
               component="span"
               onClick={() => {
                 if (selectedCity) setSelectedCity('')
                 panToWithZoomLevel(CENTER_OF_TAIWAN, zoomLevelConfig.wholeTaiwan)
               }}
-              alt="Go To TaiWan"
+              alt="Move To TaiWan"
             >
               <LocationCity />
             </IconButton>
+            <IconButton
+              color="primary"
+              aria-label="upload picture"
+              component="span"
+              onClick={() => {
+                //  HTML5 geolocation.
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    position => {
+                      const pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                      }
+                      console.log(pos)
+                      // map.setCenter(pos)
+                      panToWithZoomLevel(pos, zoomLevelConfig.placeSearch)
+                    },
+                    () => {
+                      console.error('some error on getting current postion')
+                    }
+                  )
+                } else {
+                  console.warn("Browser doesn't support Geolocation")
+                }
+              }}
+              alt="Get GPS"
+            >
+              <GpsFixedOutlinedIcon />
+            </IconButton>
           </label>
+        </div>
+
+        <div className="list-container">
+          <VirtualizedTable />
         </div>
       </div>
     </>
