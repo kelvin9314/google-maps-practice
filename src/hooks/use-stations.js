@@ -7,16 +7,12 @@ const useStations = () => {
     revalidateOnFocus: false,
   }
 
-  const { data: stationYb1, errorYb1 } = useSWR('/api/front/station/all', fetcher, options)
-  const { data: stationYb2, errorYb2 } = useSWR(
-    `/api/front/station/all?${httpBuildQuery({ type: '2' })}`,
-    fetcher,
-    options
-  )
+  const { data: stationYb1, errorYb1 } = useSWR('/json/station-yb1.json', fetcher, options)
+  const { data: stationYb2, errorYb2 } = useSWR(`/json/station-yb2.json`, fetcher, options)
 
   const data = {
-    yb1: stationYb1?.retVal,
-    yb2: stationYb2?.retVal,
+    yb1: stationYb1,
+    yb2: stationYb2,
   }
 
   return {

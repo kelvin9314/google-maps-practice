@@ -53,3 +53,8 @@ body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, 
   font-weight: 600;
   cursor: pointer;
 }
+
+
+.map_point-f2e-edit {
+  border: .35em #ffef00 solid;background: #fff;position: absolute;border-radius:100%;width: 5.4em;height: 5.4em;text-align: center;font-size: 1.6em;display: flex;justify-content: center;align-items: center;
+}

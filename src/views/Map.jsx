@@ -49,7 +49,7 @@ const clusterOptions = {
 const mapOptions = {
   streetViewControl: false,
   // heading: 5,
-  // tilt: 0,
+  tilt: 0,
   minZoom: zoomLevelConfig.wholeTaiwan,
   scrollwheel: true,
 }
@@ -110,9 +110,11 @@ function Map() {
     const yb2 = rawStations.yb2 ? R.clone(rawStations.yb2) : []
 
     const processingData = s => {
+      const area = R.values(areaConfig).find(area => area.areaCode === s.area_code)
       return {
         ...s,
         markerIcon: getStationMarkerIcon(s),
+        areaName: area.name,
       }
     }
     const stationAll = R.map(processingData, R.concat(yb1, yb2))
@@ -196,7 +198,8 @@ function Map() {
 
   const mapZoomLevelChecker = () => {
     if (!map) return
-    console.log('zoom level: ', map.getZoom())
+
+    if (process.env.NODE_ENV === 'development') console.log('zoom level: ', map.getZoom())
 
     // console.log(infoWindowRef)
     if (map.getZoom() >= zoomLevelConfig.markerShow) {
@@ -281,45 +284,65 @@ function Map() {
     }
   }
 
-  const handlerOverLayOffset = ({ offsetWidth, offsetHeight, area }) => {
+  const calculateOverLayOffset = ({ offsetWidth, offsetHeight, area }) => {
     // console.log(area)
     const offsetSolution = {
       goTop: {
         x: 0,
-        y: -50,
+        y: -60,
+      },
+      goRightTop: {
+        x: 60,
+        y: -60,
       },
       goRight: {
-        x: 50,
+        x: 60,
         y: 0,
       },
       goRightBottom: {
-        x: 50,
-        y: 50,
+        x: 60,
+        y: 60,
       },
       goBottom: {
         x: 0,
-        y: 50,
+        y: 60,
       },
       goLeftBottom: {
-        x: -50,
+        x: -60,
         y: 0,
       },
       goLeft: {
-        x: -50,
+        x: -60,
         y: 0,
+      },
+      goLeftTop: {
+        x: -60,
+        y: -60,
       },
     }
 
-    if (area.areaCode === areaConfig.taipei.areaCode) return offsetSolution.goTop
-    if (area.areaCode === areaConfig.tycg.areaCode) return offsetSolution.goTop
+    if (area.areaCode === areaConfig.taipei.areaCode) {
+      return {
+        x: 0,
+        y: -80,
+      }
+    }
+    // if (area.areaCode === areaConfig.ntpc.areaCode) return offsetSolution.goTop
 
-    if (area.areaCode === areaConfig.hccg.areaCode) return offsetSolution.goLeft
+    if (area.areaCode === areaConfig.tycg.areaCode) {
+      return {
+        x: -20,
+        y: -80,
+      }
+    }
 
-    if (area.areaCode === areaConfig.miaoli.areaCode) return offsetSolution.goLeftBottom
-    if (area.areaCode === areaConfig.taichung.areaCode) return offsetSolution.goLeft
+    if (area.areaCode === areaConfig.hccg.areaCode) return offsetSolution.goLeftTop
+    //
+    if (area.areaCode === areaConfig.miaoli.areaCode) return offsetSolution.goLeft
+    if (area.areaCode === areaConfig.i.areaCode) return offsetSolution.goLeft
     if (area.areaCode === areaConfig.chiayi.areaCode) return offsetSolution.goLeft
 
-    if (area.areaCode === areaConfig.kcg.areaCode) return offsetSolution.goTop
+    if (area.areaCode === areaConfig.kcg.areaCode) return offsetSolution.goLeftTop
   }
 
   const setQueryParamsInSamePage = obj => {
@@ -390,6 +413,7 @@ function Map() {
               id="combo-box-demo"
               options={stationByBikeType || []}
               getOptionLabel={option => option.name_tw}
+              groupBy={option => option.areaName || ''}
               style={{ width: 300 }}
               // autoHighlight={true}
               // clearOnBlur={true}
@@ -423,7 +447,6 @@ function Map() {
             center={displayInfo.centerOfMap}
             zoom={zoomLevelConfig.wholeTaiwan}
             options={mapOptions}
-            tilt={0}
             onLoad={onLoadMap}
             onUnmount={onUnmountMap}
             onZoomChanged={mapZoomLevelChecker}
@@ -446,7 +469,7 @@ function Map() {
                     return (
                       <Marker
                         key={createKeyForStation(station)}
-                        // cursor={""}
+                        cursor={''}
                         title={station.name_tw}
                         onLoad={marker => {
                           // setDisplayInfo(draft => {
@@ -483,7 +506,7 @@ function Map() {
                     // mapPaneName={OverlayView.FLOAT_PANE}
                     // mapPaneName={OverlayView.MARKER_LAYER}
                     // getPixelPositionOffset={(offsetWidth, offsetHeight) =>
-                    //   handlerOverLayOffset({ offsetWidth, offsetHeight, area: area })
+                    //   calculateOverLayOffset({ offsetWidth, offsetHeight, area: area })
                     // }
                   >
                     <div className="map_point" onClick={() => setSelectedCity(area.keyNameF2E)}>
